@@ -35,12 +35,12 @@ module Decoder(
     input [6:0] Opcode ,
     input [2:0] Funct3 ,
     input [6:0] Funct7 ,
-    output [1:0] PCS,		// 00 for non-control, 01 for conditional branch, 10 for jal, 11 for jalr
-    output RegWrite,		// Asserted only by instructions which write to register file (load, auipc, lui, DPImm, DPReg);
-    output MemWrite,		// Asserted only by store (sw)
-    output MemtoReg,		// Asserted only by load (lw)
-    // output [1:0] ALUSrcA, 	// Needed for lui, auipic. Refer to the microarchitecture for its use. Uncomment wire and port map in RV.v as well
-    output ALUSrcB,		// Asserted by all instructions which use an immediate (load, store, lui, auipc, DPImm). Needs to be expanded to a 2-bit signal to support link functionality for jal, jalr. Change wire width in RV.v as well
+    output reg [1:0] PCS,		// 00 for non-control, 01 for conditional branch, 10 for jal, 11 for jalr
+    output reg RegWrite,		// Asserted only by instructions which write to register file (load, auipc, lui, DPImm, DPReg);
+    output reg MemWrite,		// Asserted only by store (sw)
+    output reg MemtoReg,        //Asserted only for load (lw)
+    output reg [1:0] ALUSrcA, 	// Needed for lui, auipic. Refer to the microarchitecture for its use. Uncomment wire and port map in RV.v as well
+    output reg [1:0] ALUSrcB,		// Asserted by all instructions which use an immediate (load, store, lui, auipc, DPImm). Needs to be expanded to a 2-bit signal to support link functionality for jal, jalr. Change wire width in RV.v as well
     output reg [2:0] ImmSrc, 	// 000 for U, 010 for UJ, 011 for I, 110 for S, 111 for SB.
     output reg [3:0] ALUControl	// 0000 for add, 0001 for sub, 1110 for and, 1100 for or, 0010 for sll, 1010 for srl, 1011 for sra, 0001 for branch, 0000 for all others.
     					// Note that the most significant 3 bits are Funct3 for all DP instrns. LSB is the same as Funct[5] for DPReg type and DPImm_shifts. For other DPImms, Funct[5] is 0.
@@ -52,6 +52,105 @@ module Decoder(
     
     	// todo: Implement Decoder here
 	
+	always @(*) begin
+        if (Opcode == 7'b0110011) begin
+            // DP Reg
+            PCS = 2'b00;
+            MemtoReg = 0;
+            RegWrite = 1;
+            MemWrite = 0;
+            ALUSrcA[0] = 0;
+            ALUSrcB[0] = 0;
+            //ImmSrc value not required here
+            ALUControl = {Funct3, Funct7[5]};
+                
+        end else if (Opcode == 7'b0010011) begin
+            // DP Immediate
+            PCS = 2'b00;
+            MemtoReg = 0;
+            RegWrite = 1;
+            MemWrite = 0;
+            ALUSrcA[0] = 0;
+            ALUSrcB = 2'b11;
+            ImmSrc = 3'b011;
+            ALUControl[3:1] = Funct3;
+            ALUControl[0] = (Funct3 == 3'h5) ? Funct7[5] : 1'b0;
+            
+        end else if (Opcode == 7'b0000011) begin
+            // LOAD
+            PCS = 2'b00;
+            MemtoReg = 1;
+            RegWrite = 1;
+            MemWrite = 0;
+            ALUSrcA[0]= 0;
+            ALUSrcB = 2'b11;
+            ImmSrc = 3'b011;
+            ALUControl[3:0] = 4'b0000;
+        end else if (Opcode == 7'b0100011) begin
+            // STORE
+            PCS = 2'b00;
+            // MemtoReg
+            RegWrite = 0;
+            MemWrite = 1;
+            ALUSrcA[0] = 0;
+            ALUSrcB = 2'b11;
+            ImmSrc = 3'b110;
+            ALUControl[3:0] = 4'b0000;
+        end else if (Opcode == 7'b1100011) begin
+            // BRANCH
+            PCS = 2'b01;
+            //MemtoReg
+            RegWrite = 0;
+            MemWrite = 0;
+            ALUSrcA[0] = 0;
+            ALUSrcB[0] = 0;
+            ImmSrc = 3'b111;
+            ALUControl[3:0] = 4'b0001;
+        end else if (Opcode == 7'b1101111) begin
+            // JAL
+            PCS = 2'b10;
+            MemtoReg = 0;
+            RegWrite = 1;
+            MemWrite = 0;
+            ALUSrcA = 2'b11;
+            ALUSrcB = 2'b01;
+            ImmSrc = 3'b010;
+            ALUControl[3:0] = 4'b0000;
+        end else if (Opcode == 7'b0010111) begin
+            // AUIPC
+            PCS = 2'b00;
+            MemtoReg = 0;
+            RegWrite = 1;
+            MemWrite = 0;
+            ALUSrcA = 2'b11;
+            ALUSrcB = 2'b11;
+            ImmSrc = 3'b000;
+            ALUControl[3:0] = 4'b0000;
+        end else if (Opcode == 7'b0110111) begin
+            // LUI
+            PCS = 2'b00;
+            MemtoReg = 0;
+            RegWrite = 1;
+            MemWrite = 0;
+            ALUSrcA = 2'b01;
+            ALUSrcB = 2'b11;
+            ImmSrc = 3'b000;
+            ALUControl[3:0] = 4'b0000;
+        end else if (Opcode == 7'b1100111) begin
+            // JALR
+            PCS = 2'b11;
+            MemtoReg = 0;
+            RegWrite = 1;
+            MemWrite = 0;
+            ALUSrcA = 2'b11;
+            ALUSrcB = 2'b01;
+            ImmSrc = 3'b011;
+            ALUControl[3:0] = 4'b0000;
+
+        end else begin
+            // Default / Catch-all for unknown or unsupported opcodes
+        end
+    end
 	    
 endmodule
 
