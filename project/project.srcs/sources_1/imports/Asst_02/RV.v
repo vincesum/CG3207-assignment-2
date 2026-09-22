@@ -47,7 +47,7 @@ module RV #(
     input [31:0] ReadData_in,       // Name mangled to support lb/lbu/lh/lhu
     output MemRead,
     output [3:0] MemWrite_out,		// Column-wise write enable to support sb/sw. Each column is a byte.
-    output [31:0] PC,
+    output reg [31:0] PC,
     output [31:0] ALUResult,
     output [31:0] WriteData_out		// Name mangled to support sb/sw
 );
@@ -173,6 +173,8 @@ module RV #(
     
     assign WriteData = RD2;
 	
+	//Regwrite
+	assign WD = MemtoReg ? ReadData : ALUResult;
     // Instantiate RegFile
     RegFile RegFile1( 
                     CLK,

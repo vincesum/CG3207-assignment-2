@@ -41,6 +41,12 @@ xsim.dir/
 *.wdb
 *.wcfg.bak
 
+# --- Vivado Cache/Runs
+*.cache/
+*.runs/
+*.hw/
+*.ip_user_files/
+
 # --- OS Specific Files ---
 .DS_Store
 Thumbs.db
