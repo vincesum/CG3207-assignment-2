@@ -47,7 +47,7 @@ module RV #(
     input [31:0] ReadData_in,       // Name mangled to support lb/lbu/lh/lhu
     output MemRead,
     output [3:0] MemWrite_out,		// Column-wise write enable to support sb/sw. Each column is a byte.
-    output [31:0] PC,
+    output reg [31:0] PC,
     output [31:0] ALUResult,
     output [31:0] WriteData_out		// Name mangled to support sb/sw
 );
@@ -87,8 +87,8 @@ module RV #(
     wire RegWrite ;
     //wire MemWrite ;
     wire MemtoReg ;
-    //wire [1:0] ALUSrcA ;
-    wire ALUSrcB ;
+    wire [1:0] ALUSrcA ;
+    wire [1:0] ALUSrcB ;
     //wire [2:0] ImmSrc ;
     wire [3:0] ALUControl ;
 
@@ -126,7 +126,12 @@ module RV #(
                                          // supporting lb/sb/lbu/lh/sh/lhu/lw/sw. Hint: funct3
 
     // todo: other datapath connections here
+    //ALU sources
+    assign Src_A = ALUSrcA[0] ? (ALUSrcA[1] ? PC : 0) : RD1;    
+	assign Src_B = ALUSrcB[0] ? (ALUSrcB[1] ? ExtImm : 4) : RD2;
 	
+	//Regwrite
+	assign WD = MemtoReg ? ReadData : ALUResult;
     // Instantiate RegFile
     RegFile RegFile1( 
                     CLK,
@@ -155,7 +160,7 @@ module RV #(
                     RegWrite,
                     MemWrite,
                     MemtoReg,
-                    //ALUSrcA,
+                    ALUSrcA,
                     ALUSrcB,
                     ImmSrc,
                     ALUControl

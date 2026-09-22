@@ -40,10 +40,10 @@ module ALU(
 );
     
 	// Shifter signals
-	wire [1:0] Sh ;
-	wire [4:0] Shamt5 ;
-	wire [31:0] ShIn ;
-	wire [31:0] ShOut ;
+	wire [1:0] Sh ; // sll, srl, sra shift type
+	wire [4:0] Shamt5 ; // number of bits to shift
+	wire [31:0] ShIn ; // shifter input
+	wire [31:0] ShOut ; // shifter output
 	
 	// Other signals
 	wire [32:0] S_wider ;
@@ -84,8 +84,9 @@ module ALU(
     
 	// todo: make shifter connections here
 	// Sh signals can be derived directly from the appropriate ALUControl bits
+    assign Sh = {ALUControl[3], ALUControl[0]}; //SLL 00, SRL 10, SRA 11
     
-    
+        
 	// Instantiate Shifter        
 	Shifter Shifter1(
                 Sh,
