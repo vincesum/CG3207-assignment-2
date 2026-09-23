@@ -140,7 +140,7 @@ module RV #(
     assign WE = RegWrite;
     
     // Multiplexers for ALU Inputs
-    assign Src_A = ALUSrcA[0] ? (ALUSrcA[1] ? 0 : PC) : RD1;
+    assign Src_A = ALUSrcA[0] ? (ALUSrcA[1] ? PC : 0) : RD1; // 00: RD1, 01: 0 (lui), 11: PC (auipc, jal, jalr)
     assign Src_B = ALUSrcB[0] ? (ALUSrcB[1] ? ExtImm : 4) : RD2;
     
     assign Result = MemtoReg ? ReadData : ALUResult; //Multiplex Result from Memory or ALU
