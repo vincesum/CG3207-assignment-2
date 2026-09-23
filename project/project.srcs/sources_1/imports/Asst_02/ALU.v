@@ -83,9 +83,14 @@ module ALU(
     assign ShIn = Src_A;
     assign Shamt5 = Src_B[4:0];
     
-	assign Z = (ALUResult == 0) ? 1 : 0 ;
+    assign N = S_wider[31];                 // sign bit of the 32-bit result
+    assign C = S_wider[32];                 // carry-out of the 33-bit adder
+    assign V = (Src_A_comp[31] == Src_B_comp[31]) &&
+               (Src_A_comp[31] != S_wider[31]); // signed overflow
     
-	assign ALUFlags = {Z, 1'b0, 1'b0} ; 	//{eq, lt, ltu} - all except eq are placeholders. 
+    assign Z = (ALUResult == 0) ? 1 : 0 ;
+    
+    assign ALUFlags = {Z, N ^ V, ~C} ;   //{eq, lt, ltu}
     						// todo: Will need to be modified in lab 3 to support blt, bltu, bge, bgeu.
     
     

@@ -46,7 +46,34 @@ module PC_Logic( // This is a combinational module, unlike ARM. See the note bel
     
     
 	// todo: conditional logic goes here
-	
+    always @(*) begin
+        // Default first - avoids inferring a latch if any PCS/Funct3
+        // combination falls through unhandled.
+        PCSrc = 2'b00;
+    
+        if (PCS == 2'b00) begin
+            // Non-control instruction
+            PCSrc = 2'b00;
+    
+        end else if (PCS == 2'b01) begin
+            // Conditional branch - decide 'taken' from Funct3 + ALUFlags
+            if (Funct3 == 3'b000)      PCSrc = ALUFlags[2] ? 2'b10 : 2'b00; // beq
+            else if (Funct3 == 3'b001) PCSrc = ~ALUFlags[2] ? 2'b10 : 2'b00; // bne
+            else if (Funct3 == 3'b100) PCSrc = ALUFlags[1] ? 2'b10 : 2'b00; // blt
+            else if (Funct3 == 3'b101) PCSrc = ~ALUFlags[1] ? 2'b10 : 2'b00; // bge
+            else if (Funct3 == 3'b110) PCSrc = ALUFlags[0] ? 2'b10 : 2'b00; // bltu
+            else if (Funct3 == 3'b111) PCSrc = ~ALUFlags[0] ? 2'b10 : 2'b00; // bgeu
+            else                       PCSrc = 2'b00; // undefined Funct3, safe default
+    
+        end else if (PCS == 2'b10) begin
+            // jal - always taken
+            PCSrc = 2'b10;
+    
+        end else if (PCS == 2'b11) begin
+            // jalr - always taken
+            PCSrc = 2'b11;
+        end
+    end
 	
 endmodule
 
