@@ -53,6 +53,15 @@ module Decoder(
     	// todo: Implement Decoder here
 	
 	always @(*) begin
+	   // --- DEFAULT VALUES (Prevents Latches) ---
+        PCS = 2'b00;
+        RegWrite = 0;
+        MemWrite = 0;
+        MemtoReg = 0;
+        ALUSrcA = 2'b00;
+        ALUSrcB = 2'b00;
+        ImmSrc = 3'b000;
+        ALUControl = 4'b0000;
         if (Opcode == 7'b0110011) begin
             // DP Reg
             PCS = 2'b00;

@@ -54,7 +54,7 @@ module ALU(
 				// Hint: We need to care about V only for subtraction
 	
 	assign S_wider = Src_A_comp + Src_B_comp + C_0 ;
-    
+	
 	always@(Src_A, Src_B, ALUControl, S_wider, ShOut) begin
         // default values; help avoid latches
 		C_0 = 0 ; 
@@ -68,14 +68,21 @@ module ALU(
 				Src_B_comp = {1'b0, ~ Src_B} ;
 				ALUResult = S_wider[31:0] ;
 			end
-	            	4'b1110: ALUResult = Src_A & Src_B ;	// and
-	            	4'b1100: ALUResult = Src_A | Src_B ; 	// or
-	            
-			// include cases for shifts		// shifts
-			default: ALUResult = 32'bx;
-	        endcase
+            4'b1110: ALUResult = Src_A & Src_B ;	// and
+            4'b1100: ALUResult = Src_A | Src_B ; 	// or
+            4'b0010: ALUResult = ShOut ;            // sll
+            4'b1010: ALUResult = ShOut ;            // srl
+            4'b1011: ALUResult = ShOut ;            // sra
+            // -----------------------------
+                    
+            default: ALUResult = 32'bx;
+            endcase
 	    end
       
+    //Shifter inputs
+    assign ShIn = Src_A;
+    assign Shamt5 = Src_B[4:0];
+    
 	assign Z = (ALUResult == 0) ? 1 : 0 ;
     
 	assign ALUFlags = {Z, 1'b0, 1'b0} ; 	//{eq, lt, ltu} - all except eq are placeholders. 

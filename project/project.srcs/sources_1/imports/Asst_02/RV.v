@@ -47,7 +47,7 @@ module RV #(
     input [31:0] ReadData_in,       // Name mangled to support lb/lbu/lh/lhu
     output MemRead,
     output [3:0] MemWrite_out,		// Column-wise write enable to support sb/sw. Each column is a byte.
-    output reg [31:0] PC,
+    output [31:0] PC,
     output [31:0] ALUResult,
     output [31:0] WriteData_out		// Name mangled to support sb/sw
 );
@@ -99,8 +99,8 @@ module RV #(
     wire [1:0] PCSrc;
       
     // ALU signals
-    reg [31:0] Src_A ;
-    reg [31:0] Src_B ;
+    wire [31:0] Src_A ;
+    wire [31:0] Src_B ;
     //wire [3:0] ALUControl ;
     //wire [31:0] ALUResult ;
     wire [2:0] ALUFlags ;
@@ -139,21 +139,9 @@ module RV #(
     //To control Write-Enable
     assign WE = RegWrite;
     
-    always @(*) begin
-        case (ALUSrcA)
-            2'bX0: Src_A = RD1;
-            2'b01: Src_A = 0;
-            2'b11: Src_A = PC;
-        endcase
-    end
-    
-    always @(*) begin
-        case (ALUSrcB)
-            2'bX0: Src_B = RD2;
-            2'b01: Src_B = 4;
-            2'b11: Src_B = ExtImm;
-        endcase
-    end
+    // Multiplexers for ALU Inputs
+    assign Src_A = ALUSrcA[0] ? (ALUSrcA[1] ? 0 : PC) : RD1;
+    assign Src_B = ALUSrcB[0] ? (ALUSrcB[1] ? ExtImm : 4) : RD2;
     
     assign Result = MemtoReg ? ReadData : ALUResult; //Multiplex Result from Memory or ALU
     assign WD = Result; //Write to Register File from result
@@ -173,8 +161,6 @@ module RV #(
     
     assign WriteData = RD2;
 	
-	//Regwrite
-	assign WD = MemtoReg ? ReadData : ALUResult;
     // Instantiate RegFile
     RegFile RegFile1( 
                     CLK,
