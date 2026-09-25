@@ -110,7 +110,7 @@ module RV #(
     //wire RESET ;
     wire WE_PC ;    
     reg [31:0] PC_IN ;
-    //wire [31:0] PC ; 
+    wire [31:0] PC ; 
         
     // Other internal signals here
     wire [31:0] PC_Offset ;
@@ -155,7 +155,7 @@ module RV #(
             2'b10: PC_IN = (ExtImm + PC);
             2'b11: PC_IN = (ExtImm + RD1);
         endcase
-    end 
+    end  
     
     //assign PC_IN = PC + 32'd4; //Temporary for simulation while PC_Logic module was incomplete
     

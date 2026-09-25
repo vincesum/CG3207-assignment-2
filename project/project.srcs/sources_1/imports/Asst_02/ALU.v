@@ -62,17 +62,28 @@ module ALU(
 		Src_B_comp = {1'b0, Src_B} ;
     
 		case(ALUControl)
-			4'b0000: ALUResult = S_wider[31:0] ;	//add          
-	            	4'b0001: begin				//sub
+			4'b0000: ALUResult = S_wider[31:0] ;	// add          
+            4'b0001: begin				            // sub
 				C_0[0] = 1 ;  
 				Src_B_comp = {1'b0, ~ Src_B} ;
 				ALUResult = S_wider[31:0] ;
 			end
+			4'b1000: ALUResult = Src_A ^ Src_B ;    // xor
             4'b1110: ALUResult = Src_A & Src_B ;	// and
             4'b1100: ALUResult = Src_A | Src_B ; 	// or
             4'b0010: ALUResult = ShOut ;            // sll
             4'b1010: ALUResult = ShOut ;            // srl
             4'b1011: ALUResult = ShOut ;            // sra
+            4'b0100: begin                          // slt
+                C_0[0] = 1 ;
+                Src_B_comp = {1'b0, ~ Src_B} ;
+                ALUResult = {31'b0, N ^ V};
+            end
+            4'b0110: begin                          // sltu
+                C_0[0] = 1 ;
+                Src_B_comp = {1'b0, ~ Src_B} ;
+                ALUResult = {31'b0, ~C};
+            end
             // -----------------------------
                     
             default: ALUResult = 32'bx;
