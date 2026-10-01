@@ -153,7 +153,7 @@ module RV #(
             2'b00: PC_IN = (4 + PC);
             2'b01: PC_IN = (4 + RD1);
             2'b10: PC_IN = (ExtImm + PC);
-            2'b11: PC_IN = (ExtImm + RD1);
+            2'b11: PC_IN = (ExtImm + RD1) & ~32'h1; // jalr: clear LSB per RISC-V spec
         endcase
     end  
     

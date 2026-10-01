@@ -50,3 +50,21 @@ xsim.dir/
 # --- OS Specific Files ---
 .DS_Store
 Thumbs.db
+Assignment2_Friday01.zip
+Assignment2_Friday01/AA_DMEM.mem
+Assignment2_Friday01/AA_IROM.mem
+Assignment2_Friday01/ALU.v
+Assignment2_Friday01/Decoder.v
+Assignment2_Friday01/PC_Logic.v
+Assignment2_Friday01/RV.v
+Assignment2_Friday01/Shifter.v
+Assignment2_Friday01/test.asm
+Assignment2_Friday01/TOP.bit
+Assignment2_Friday01/TOP_Nexys.vhd
+Assignment2_Friday01/Wrapper.v
+Assignment2_Friday01/testbenches/test_RV_branches.v
+Assignment2_Friday01/testbenches/test_RV_dp.v
+Assignment2_Friday01/testbenches/test_RV_DP_extended.v
+Assignment2_Friday01/testbenches/test_RV_lw_sw_lui_auipc.v
+Assignment2_Friday01/testbenches/test_RV_shifter.v
+Assignment2_Friday01/testbenches/test_Wrapper_DIP_to_LED_self_checking.v
