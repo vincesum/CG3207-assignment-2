@@ -95,8 +95,16 @@ test_bltu:
     jal  x0, fail_trap         
 
 test_bgeu:
-    bgeu x28, x27, test_jal   
+    bgeu x28, x27, test_bgeu_not_taken 
     li   x30, 0x06             # Error Code 6: BGEU failed
+    jal  x0, fail_trap
+    
+test_bgeu_not_taken:
+    bgeu x27, x28, bgeu_not_taken_failed
+    jal  x0, test_jal
+    
+bgeu_not_taken_failed:
+    li   x30, 0x07             # Error Code 7: BGEU_NOT_TAKEN failed
     jal  x0, fail_trap
     
     # --------------------------------------------------------
