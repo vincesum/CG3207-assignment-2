@@ -23,8 +23,8 @@ module test_Wrapper #(
 	   parameter N_LEDs_OUT	= 8,					
 	   parameter N_DIPs		= 16,
 	   parameter N_PBs		= 3,
-	   parameter LW_DIP_PC_ADDRESS = 9'h118,    // Address for lw instruction (bits [8:2] = 0x07)
-	   parameter SW_LED_PC_ADDRESS = 9'h11C,    // Address for sw instruction (bits [8:2] = 0x08)
+	   parameter LW_DIP_PC_ADDRESS = 9'h10C,    // Address for lw instruction (bits [8:2] = 0x07)
+	   parameter SW_LED_PC_ADDRESS = 9'h110,    // Address for sw instruction (bits [8:2] = 0x08)
 	   parameter LW_SW_CYCLES = 0                // Number of cycles between lw and sw (default 0)
 	)
 	(

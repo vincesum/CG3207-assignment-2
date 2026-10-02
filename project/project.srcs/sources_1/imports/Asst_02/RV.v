@@ -109,10 +109,11 @@ module RV #(
     //wire CLK ;
     //wire RESET ;
     wire WE_PC ;    
-    reg [31:0] PC_IN ;
+    wire [31:0] PC_IN ;
     wire [31:0] PC ; 
         
     // Other internal signals here
+    wire [31:0] PC_Base ;
     wire [31:0] PC_Offset ;
     wire [31:0] Result ;
     
@@ -146,16 +147,11 @@ module RV #(
     assign Result = MemtoReg ? ReadData : ALUResult; //Multiplex Result from Memory or ALU
     assign WD = Result; //Write to Register File from result
     
-    assign PC_Offset = PC + ExtImm;
-    
-        always @(*) begin
-        case (PCSrc)
-            2'b00: PC_IN = (4 + PC);
-            2'b01: PC_IN = (4 + RD1);
-            2'b10: PC_IN = (ExtImm + PC);
-            2'b11: PC_IN = (ExtImm + RD1) & ~32'h1; // jalr: clear LSB per RISC-V spec
-        endcase
-    end  
+    // Next PC uses a single adder: PC_Base + PC_Offset
+    // PCSrc: 00: PC + 4, 10: PC + ExtImm (branch, jal), 11: RD1 + ExtImm (jalr)
+    assign PC_Base = PCSrc[0] ? RD1 : PC;
+    assign PC_Offset = PCSrc[1] ? ExtImm : 32'd4;
+    assign PC_IN = PC_Base + PC_Offset;
     
     //assign PC_IN = PC + 32'd4; //Temporary for simulation while PC_Logic module was incomplete
     

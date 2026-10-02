@@ -7,6 +7,10 @@
     test_word: .word 0xDEADBEEF 
     save_word: .word 0x00000000
     delay_val: .word 4          # Delay constant for the LED loop
+    # Operand pairs (a, b) for the branch tests in section 7
+    branch_ops: .word 5, 5      # a == b
+                .word -1, 1     # a < b signed,  a > b unsigned
+                .word 1, -1     # a > b signed,  a < b unsigned
 
 .text
 .globl main
@@ -32,8 +36,8 @@ main:
     # 3. IMMEDIATE SHIFTS
     # --------------------------------------------------------
     slli x10, x3, 2           # x10 = 10 << 2 = 40 
-    srli x11, x3, 1           # x11 = 10 >> 1 = 5
-    srai x12, x4, 1           # x12 = -5 >> 1 = -3 
+    srli x11, x4, 1           # x11 = 0xFFFFFFFB >>> 1 = 0x7FFFFFFD (zero fill; compare srai below)
+    srai x12, x4, 1           # x12 = -5 >> 1 = -3 = 0xFFFFFFFD (sign fill)
 
     # --------------------------------------------------------
     # 4. REGISTER DATA PROCESSING (DP)
@@ -51,8 +55,8 @@ main:
     # --------------------------------------------------------
     addi x20, x0, 2           # x20 = 2 (Shift amount)
     sll  x21, x3, x20         # x21 = 10 << 2 = 40
-    srl  x22, x3, x20         # x22 = 10 >> 2 = 2 
-    sra  x23, x4, x20         # x23 = -5 >> 2 = -2 
+    srl  x22, x4, x20         # x22 = 0xFFFFFFFB >>> 2 = 0x3FFFFFFE (zero fill; compare sra below)
+    sra  x23, x4, x20         # x23 = -5 >> 2 = -2 = 0xFFFFFFFE (sign fill)
 
     # --------------------------------------------------------
     # 6. MEMORY INSTRUCTIONS (LW / SW)
@@ -65,67 +69,74 @@ main:
     sw   x26, 4(x24)          # Store 0x77 into save_word 
 
 # --------------------------------------------------------
-    # 7. BRANCH INSTRUCTIONS
+    # 7. CONDITIONAL BRANCHES (each one taken AND not taken)
     # --------------------------------------------------------
-    addi x27, x0, 5
-    addi x28, x0, 5
-    beq  x27, x28, test_bne   
-    li   x30, 0x01             # Error Code 1: BEQ failed
-    jal  x0, fail_trap         
+    # All six branches run once per operand pair in branch_ops. Across the
+    # three pairs, every branch is taken at least once and not taken at least once.
+    # x29 records one bit per branch: shift left, then set to 1 only if NOT taken.
+    #
+    #   pair (a, b) | beq  bne  blt  bge  bltu bgeu | bits (1 = not taken)
+    #   ------------+-------------------------------+---------------------
+    #   ( 5,  5)    |  T    NT   NT   T    NT   T   | 0 1 1 0 1 0
+    #   (-1,  1)    |  NT   T    T    NT   NT   T   | 1 0 0 1 1 0
+    #   ( 1, -1)    |  NT   T    NT   T    T    NT  | 1 0 1 0 0 1
+    #
+    #   (-1, 1): blt taken (signed -1 < 1), bltu not taken (unsigned 0xFFFFFFFF > 1)
+    #   ( 1,-1): blt not taken (signed 1 > -1), bltu taken (unsigned 1 < 0xFFFFFFFF)
+    #
+    # Expected x29 = 011010_100110_101001 = 0x1A9A9
+    lui  x24, %hi(branch_ops)
+    addi x24, x24, %lo(branch_ops)
+    addi x26, x0, 3           # x26 = passes remaining
+    addi x29, x0, 0           # x29 = branch signature
 
-test_bne:
-    addi x28, x0, 6
-    bne  x27, x28, test_blt   
-    li   x30, 0x02             # Error Code 2: BNE failed
-    jal  x0, fail_trap         
+branch_pass:
+    lw   x27, 0(x24)          # x27 = a
+    lw   x28, 4(x24)          # x28 = b
 
-test_blt:
-    blt  x27, x28, test_bge   
-    li   x30, 0x03             # Error Code 3: BLT failed
-    jal  x0, fail_trap         
+    slli x29, x29, 1
+    beq  x27, x28, beq_done
+    ori  x29, x29, 1          # beq not taken
+beq_done:
+    slli x29, x29, 1
+    bne  x27, x28, bne_done
+    ori  x29, x29, 1          # bne not taken
+bne_done:
+    slli x29, x29, 1
+    blt  x27, x28, blt_done
+    ori  x29, x29, 1          # blt not taken
+blt_done:
+    slli x29, x29, 1
+    bge  x27, x28, bge_done
+    ori  x29, x29, 1          # bge not taken
+bge_done:
+    slli x29, x29, 1
+    bltu x27, x28, bltu_done
+    ori  x29, x29, 1          # bltu not taken
+bltu_done:
+    slli x29, x29, 1
+    bgeu x27, x28, bgeu_done
+    ori  x29, x29, 1          # bgeu not taken
+bgeu_done:
+    addi x24, x24, 8          # next operand pair
+    addi x26, x26, -1
+    bne  x26, x0, branch_pass # taken after passes 1-2, not taken after pass 3
 
-test_bge:
-    bge  x28, x27, test_bltu  
-    li   x30, 0x04             # Error Code 4: BGE failed
-    jal  x0, fail_trap         
-
-test_bltu:
-    bltu x27, x28, test_bgeu  
-    li   x30, 0x05             # Error Code 5: BLTU failed
-    jal  x0, fail_trap         
-
-test_bgeu:
-    bgeu x28, x27, test_bgeu_not_taken 
-    li   x30, 0x06             # Error Code 6: BGEU failed
-    jal  x0, fail_trap
-    
-test_bgeu_not_taken:
-    bgeu x27, x28, bgeu_not_taken_failed
-    jal  x0, test_jal
-    
-bgeu_not_taken_failed:
-    li   x30, 0x07             # Error Code 7: BGEU_NOT_TAKEN failed
-    jal  x0, fail_trap
-    
     # --------------------------------------------------------
     # 8. JUMP AND LINK (JAL / JALR)
     # --------------------------------------------------------
-test_jal:
-    jal  x29, test_jalr       
-    li x30, 0xBAD      
-
-test_jalr:
-    lui  x31, %hi(end_program)
-    addi x31, x31, %lo(end_program)
-    jalr x29, 0(x31)          
-    li x30, 0xBAD    
+    # count_call adds 1 to x30 and returns with jalr x0, 0(x1). It is called
+    # once with jal and once with jalr; each must link x1 = PC + 4 for the
+    # program to return here. Expected x30 = 2.
+    addi x30, x0, 0           # x30 = call count
+    jal  x1, count_call       # call 1: jal links x1 = PC + 4
+    lui  x31, %hi(count_call)
+    addi x31, x31, %lo(count_call)
+    jalr x1, 0(x31)           # call 2: jalr links x1 = PC + 4
 
     # --------------------------------------------------------
-    # 9. END OF TEST & MMIO LED LOOP
+    # 9. MMIO LED LOOP
     # --------------------------------------------------------
-end_program:
-    li x30, 0x999     # Success code
-
     # Setup memory-mapped I/O addresses
     li s0, MMIO_BASE          # Base address: 0xFFFF0000
     addi s1, s0, LED_OFF      # LED address
@@ -141,17 +152,10 @@ wait:
     addi s3, s3, -1           # Decrement delay counter
     beq s3, zero, mmio_loop   # Once delay hits 0, refresh LEDs with new DIP states
     jal zero, wait            # Otherwise, keep decrementing delay
-    
-# --------------------------------------------------------
-# HARDWARE ERROR TRAP
-# --------------------------------------------------------
-fail_trap:
-    # Set up MMIO base address
-    lui x8, 0xFFFF0           
-    
-    # Write the error code (stored in x30) to the LEDs (offset 0x60)
-    sw x30, 0x60(x8)          
 
-trap_loop:
-    # Infinite loop to freeze the processor in the error state
-    jal x0, trap_loop
+# --------------------------------------------------------
+# SUBROUTINE: count_call (called from section 8)
+# --------------------------------------------------------
+count_call:
+    addi x30, x30, 1          # x30 += 1
+    jalr x0, 0(x1)            # return to caller
