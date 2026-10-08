@@ -110,7 +110,7 @@ module MCycle
                 if (Operand2[width-1]) // if negative, perform 2's complement
                     shifted_op2 = ~shifted_op2 + 1'b1;
             end
-        end ;
+        end
         done <= 1'b0 ;   
         
         if( ~MCycleOp[1] ) begin // Multiply
