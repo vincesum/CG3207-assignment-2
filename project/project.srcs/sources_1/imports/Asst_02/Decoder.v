@@ -42,10 +42,13 @@ module Decoder(
     output reg [1:0] ALUSrcA, 	// Needed for lui, auipic. Refer to the microarchitecture for its use. Uncomment wire and port map in RV.v as well
     output reg [1:0] ALUSrcB,		// Asserted by all instructions which use an immediate (load, store, lui, auipc, DPImm). Needs to be expanded to a 2-bit signal to support link functionality for jal, jalr. Change wire width in RV.v as well
     output reg [2:0] ImmSrc, 	// 000 for U, 010 for UJ, 011 for I, 110 for S, 111 for SB.
-    output reg [3:0] ALUControl	// 0000 for add, 0001 for sub, 1110 for and, 1100 for or, 0010 for sll, 1010 for srl, 1011 for sra, 0001 for branch, 0000 for all others.
+    output reg [3:0] ALUControl,	// 0000 for add, 0001 for sub, 1110 for and, 1100 for or, 0010 for sll, 1010 for srl, 1011 for sra, 0001 for branch, 0000 for all others.
     					// Note that the most significant 3 bits are Funct3 for all DP instrns. LSB is the same as Funct[5] for DPReg type and DPImm_shifts. For other DPImms, Funct[5] is 0.
     					// It is the same as sub for branches, and add for all others not mentioned in the line above.
-    ); 
+    output reg MCycleStart,		// Asserted by mul, mulh, mulhu, div, divu, rem, remu. Also tells the datapath to write back the MCycle result instead of ALUResult
+    output reg [1:0] MCycleOp,	// 00 for signed mul, 01 for unsigned mul, 10 for signed div, 11 for unsigned div
+    output reg MCycleResultSel	// 0 for Result1 (mul, div, divu), 1 for Result2 (mulh, mulhu, rem, remu)
+    );
 // Change wire to reg if assigned inside a procedural (always) block. However, where it is easy enough, use assign instead of always.
 // A 2-1 multiplexing can be done easily using an assign with a ternary operator
 // For multiplexing with number of inputs > 2, a case construct within an always block is a natural fit. DO NOT to use nested ternary assignment operator as it hampers the readability of your code.
@@ -62,6 +65,9 @@ module Decoder(
         ALUSrcB = 2'b00;
         ImmSrc = 3'b000;
         ALUControl = 4'b0000;
+        MCycleStart = 0;
+        MCycleOp = 2'b00;
+        MCycleResultSel = 0;
         if (Opcode == 7'b0110011) begin
             // DP Reg
             PCS = 2'b00;
@@ -72,7 +78,25 @@ module Decoder(
             ALUSrcB[0] = 0;
             //ImmSrc value not required here
             ALUControl = {Funct3, Funct7[5]};
-                
+
+            if (Funct7[0]) begin
+                // M extension (Funct7 = 0000001). ALUControl is unused; the MCycle result is written back instead
+                MCycleStart = 1;
+                case (Funct3)
+                    3'b000: begin MCycleOp = 2'b01; MCycleResultSel = 0; end // mul: low word is the same signed or unsigned, so use the faster unsigned mode
+                    3'b001: begin MCycleOp = 2'b00; MCycleResultSel = 1; end // mulh
+                    3'b011: begin MCycleOp = 2'b01; MCycleResultSel = 1; end // mulhu
+                    3'b100: begin MCycleOp = 2'b10; MCycleResultSel = 0; end // div
+                    3'b101: begin MCycleOp = 2'b11; MCycleResultSel = 0; end // divu
+                    3'b110: begin MCycleOp = 2'b10; MCycleResultSel = 1; end // rem
+                    3'b111: begin MCycleOp = 2'b11; MCycleResultSel = 1; end // remu
+                    default: begin // mulhsu not supported: treat as a no-op
+                        MCycleStart = 0;
+                        RegWrite = 0;
+                    end
+                endcase
+            end
+
         end else if (Opcode == 7'b0010011) begin
             // DP Immediate
             PCS = 2'b00;
