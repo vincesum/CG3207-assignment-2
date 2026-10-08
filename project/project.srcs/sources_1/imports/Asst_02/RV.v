@@ -91,6 +91,20 @@ module RV #(
     wire [1:0] ALUSrcB ;
     //wire [2:0] ImmSrc ;
     wire [3:0] ALUControl ;
+    wire MCycleStart ;
+    wire [1:0] MCycleOp ;
+    wire MCycleResultSel ;
+
+    // MCycle signals
+    //wire CLK ;
+    //wire RESET ;
+    //wire MCycleStart ;
+    //wire [1:0] MCycleOp ;
+    //wire [31:0] RD1 ;     // Operand1
+    //wire [31:0] RD2 ;     // Operand2
+    wire [31:0] MCycleResult1 ;
+    wire [31:0] MCycleResult2 ;
+    wire MCycleBusy ;
 
     // PC_Logic signals
     //wire [1:0] PCS
@@ -116,9 +130,10 @@ module RV #(
     wire [31:0] PC_Base ;
     wire [31:0] PC_Offset ;
     wire [31:0] Result ;
+    wire [31:0] MCycleResult ;
     
     assign MemRead = MemtoReg; // This is needed for the proper functionality of some devices such as UART CONSOLE
-    assign WE_PC = 1 ;  // Will need to control it for multi-cycle operations (Multiplication, Division) and/or Pipelining with hazard hardware.
+    assign WE_PC = ~MCycleBusy ;  // Freeze PC while a multi-cycle operation (Multiplication, Division) is on. Will need more control for Pipelining with hazard hardware.
 
     assign ReadData = ReadData_in;       // Change datapath as appropriate if supporting lb/lbu/lh/lhu
     assign WriteData_out = WriteData;    // Change datapath as appropriate if supporting sb/sh
@@ -138,13 +153,14 @@ module RV #(
     assign InstrImm = Instr[31:7];
     
     //To control Write-Enable
-    assign WE = RegWrite;
+    assign WE = RegWrite & ~MCycleBusy; // Don't write intermediate MCycle results to rd; write only once Busy drops
     
     // Multiplexers for ALU Inputs
     assign Src_A = ALUSrcA[0] ? (ALUSrcA[1] ? PC : 0) : RD1; // 00: RD1, 01: 0 (lui), 11: PC (auipc, jal, jalr)
     assign Src_B = ALUSrcB[0] ? (ALUSrcB[1] ? ExtImm : 4) : RD2;
     
-    assign Result = MemtoReg ? ReadData : ALUResult; //Multiplex Result from Memory or ALU
+    assign MCycleResult = MCycleResultSel ? MCycleResult2 : MCycleResult1; // Result2 for mulh, mulhu, rem, remu. Result1 for mul, div, divu
+    assign Result = MCycleStart ? MCycleResult : (MemtoReg ? ReadData : ALUResult); //Multiplex Result from MCycle, Memory or ALU
     assign WD = Result; //Write to Register File from result
     
     // Next PC uses a single adder: PC_Base + PC_Offset
@@ -188,7 +204,10 @@ module RV #(
                     ALUSrcA,
                     ALUSrcB,
                     ImmSrc,
-                    ALUControl
+                    ALUControl,
+                    MCycleStart,
+                    MCycleOp,
+                    MCycleResultSel
                 );
                 
     // Instantiate PC_Logic
@@ -207,6 +226,19 @@ module RV #(
                     ALUResult,
                     ALUFlags
                 );                
+    
+    // Instantiate MCycle
+    MCycle #(.width(32)) MCycle1(
+                    CLK,
+                    RESET,
+                    MCycleStart,
+                    MCycleOp,
+                    RD1,
+                    RD2,
+                    MCycleResult1,
+                    MCycleResult2,
+                    MCycleBusy
+                );
     
     // Instantiate ProgramCounter    
     ProgramCounter #(.PC_INIT(PC_INIT)) ProgramCounter1(
