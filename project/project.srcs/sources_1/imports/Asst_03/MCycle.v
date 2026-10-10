@@ -34,7 +34,7 @@
 
 module MCycle
 
-    #(parameter width = 4) // Keep this at 4 to verify your algorithms with 4 bit numbers (easier). When using MCycle as a component in ARM, generic map it to 32.
+    #(parameter width = 32) // Keep this at 4 to verify your algorithms with 4 bit numbers (easier). When using MCycle as a component in ARM, generic map it to 32.
     (
         input CLK,
         input RESET, // Connect this to the reset of the ARM processor.
@@ -53,6 +53,11 @@ module MCycle
     parameter IDLE = 1'b0 ;  // will cause a warning which is ok to ignore - [Synth 8-2507] parameter declaration becomes local in MCycle with formal parameter declaration list...
 
     parameter COMPUTING = 1'b1 ; // this line will also cause the above warning
+    
+    parameter SIGNED_MUL_CYCLES   = (width + 1) / 2;
+    parameter UNSIGNED_MUL_CYCLES = (width + 2) / 2;
+    
+    
     reg state = IDLE ;
     reg n_state = IDLE ;
    
@@ -63,6 +68,10 @@ module MCycle
     reg [2*width-1:0] shifted_op2 = 0 ;     
     reg posneg = 0 ; // 0 for positive, 1 for negative for signed division result
     reg remainder_posneg = 0 ; // Check for remainder positive/negative, like posneg
+    
+    reg [width+1:0] booth_q = 0;
+    
+    
     always@( state, done, Start, RESET ) begin : IDLE_PROCESS  
 		// Note : This block uses non-blocking assignments to get around an unpredictable Verilog simulation behaviour.
         // default outputs
@@ -100,6 +109,13 @@ module MCycle
             remainder_posneg = 0;
             count = 0 ;
             temp_sum = 0 ;
+            
+            booth_q = {
+                (~MCycleOp[0] & Operand2[width-1]),
+                Operand2,
+                1'b0
+            };
+            
             shifted_op1 = { {width{~MCycleOp[0] & Operand1[width-1]}}, Operand1 } ; // sign extend the operands  
             shifted_op2 = { {width{~MCycleOp[0] & Operand2[width-1]}}, Operand2 } ; 
             if (MCycleOp[1] & ~MCycleOp[0]) begin// if signed division
@@ -115,7 +131,38 @@ module MCycle
         
         if( ~MCycleOp[1] ) begin // Multiply
             // if( ~MCycleOp[0] ), takes 2*'width' cycles to execute, returns signed(Operand1)*signed(Operand2)
-            // if( MCycleOp[0] ), takes 'width' cycles to execute, returns unsigned(Operand1)*unsigned(Operand2)        
+            // if( MCycleOp[0] ), takes 'width' cycles to execute, returns unsigned(Operand1)*unsigned(Operand2)       
+            case (booth_q[2:0]) // Check whether to add M, 2M, -M or do nothing
+                3'b000, 3'b111: begin
+                    // Do nothing
+                end
+                3'b001, 3'b010: begin
+                    temp_sum = temp_sum + shifted_op1;
+                end
+                3'b011: begin
+                    temp_sum = temp_sum + {shifted_op1[2*width-2 : 0], 1'b0};
+                end
+                3'b100: begin
+                    temp_sum = temp_sum - {shifted_op1[2*width-2 : 0], 1'b0};
+                end
+                3'b101, 3'b110: begin
+                    temp_sum = temp_sum - shifted_op1;
+                end
+
+            endcase
+            
+            booth_q = {{2{booth_q[width+1]}} , booth_q[width+1:2]}; //Shift to next three bit booth group
+            
+            shifted_op1 = {shifted_op1[2*width-3:0],2'b00}; //Shift multiplicand
+            
+            if ((!MCycleOp[0] && count == SIGNED_MUL_CYCLES - 1) || ( MCycleOp[0] && count == UNSIGNED_MUL_CYCLES - 1)) begin
+                done <= 1'b1;
+            end
+            
+            count = count + 1;
+            
+            //Old multiplier
+            /* 
             if( shifted_op2[0] ) // add only if b0 = 1
                 temp_sum = temp_sum + shifted_op1 ; // partial product for multiplication
                 
@@ -126,6 +173,8 @@ module MCycle
                 done <= 1'b1 ;   //Signed multiplication takes 2x width because it is checking for MSB extended sign bit * width
                
             count = count + 1;    
+            */
+            
         end    
         else begin // Supposed to be Divide. The dummy code below takes 1 cycle to execute, just returns the operands. Change this to signed [ if(~MCycleOp[0]) ] and unsigned [ if(MCycleOp[0]) ] division.
             // Perform the subtraction of accumulator and divisor with shifted upper half
