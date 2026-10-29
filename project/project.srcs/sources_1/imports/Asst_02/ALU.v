@@ -55,7 +55,7 @@ module ALU(
 	
 	assign S_wider = Src_A_comp + Src_B_comp + C_0 ;
 	
-	always@(Src_A, Src_B, ALUControl, S_wider, ShOut) begin
+	always@(*) begin    // @(*): the block also reads N, V, C; a manual list left them out (stale flags in simulation)
         // default values; help avoid latches
 		C_0 = 0 ; 
 		Src_A_comp = {1'b0, Src_A} ;

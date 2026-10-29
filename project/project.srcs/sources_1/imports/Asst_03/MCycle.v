@@ -119,14 +119,19 @@ module MCycle
             shifted_op1 = { {width{~MCycleOp[0] & Operand1[width-1]}}, Operand1 } ; // sign extend the operands  
             shifted_op2 = { {width{~MCycleOp[0] & Operand2[width-1]}}, Operand2 } ; 
             if (MCycleOp[1] & ~MCycleOp[0]) begin// if signed division
-                posneg = Operand1[width-1] ^ Operand2[width-1]; // determine positive or negative result: 0 pos, 1 neg
+                posneg = (Operand1[width-1] ^ Operand2[width-1]) & (|Operand2); // result sign: 0 pos, 1 neg. Divide by 0 keeps the all-ones quotient (-1), as RISC-V requires
                 remainder_posneg = Operand1[width-1]; // dividend's sign
                 if (Operand1[width-1]) // if negative, perform 2's complement
                     shifted_op1 = ~shifted_op1 + 1'b1; 
                 if (Operand2[width-1]) // if negative, perform 2's complement
                     shifted_op2 = ~shifted_op2 + 1'b1;
             end
+            done <= 1'b0 ;
         end
+        // The first cycle only loads the operands (above). The computation starts in the next cycle,
+        // so the forwarded operands do not feed the sign handling and the first add/subtract in the
+        // same cycle. This shortens the critical path at the cost of one extra cycle per mul/div.
+        else if( state == COMPUTING ) begin
         done <= 1'b0 ;   
         
         if( ~MCycleOp[1] ) begin // Multiply
@@ -203,6 +208,7 @@ module MCycle
             end
             count = count + 1;
         end 
+        end // COMPUTING
         
         Result2 <= temp_sum[2*width-1 : width] ;
         Result1 <= temp_sum[width-1 : 0] ;

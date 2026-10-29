@@ -69,3 +69,4 @@ Assignment2_Friday01/testbenches/test_RV_lw_sw_lui_auipc.v
 Assignment2_Friday01/testbenches/test_RV_shifter.v
 Assignment2_Friday01/testbenches/test_Wrapper_DIP_to_LED_self_checking.v
 project/project.xpr
+CLAUDE.md
