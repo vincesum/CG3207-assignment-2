@@ -49,7 +49,8 @@ module RV #(
     output [3:0] MemWrite_out,		// Column-wise write enable to support sb/sw. Each column is a byte.
     output [31:0] PC,
     output [31:0] ALUResult,
-    output [31:0] WriteData_out		// Name mangled to support sb/sw
+    output [31:0] WriteData_out,	// Name mangled to support sb/sw
+    input MemStall                  // doom_soc: freeze the whole pipeline (cache miss / memory busy)
 );
     
     // Please read Lab 4 Enhancement: Implementing additional instructions on how to support lb/lbu/lh/lhu/sb/sh
@@ -202,7 +203,7 @@ module RV #(
     assign PC_Offset = PCSrcE[2] ? ExtImmE : 32'd4;
     assign PC_IN = PC_Base + PC_Offset;
 
-    assign WE_PC = ~StallF ;
+    assign WE_PC = ~StallF & ~MemStall ;
 
     // Fetch outputs (PC register is updated on posedge CLK inside ProgramCounter)
     assign PCF = PC;
@@ -223,11 +224,11 @@ module RV #(
 
     // Pipeline register F -> D (FlushD inserts a NOP)
     always @(posedge CLK) begin
-        if (RESET | FlushD) begin
+        if (RESET | (FlushD & ~MemStall)) begin
             InstrD <= 32'h00000013;     // NOP
             PCD    <= 32'b0;
         end
-        else if (~StallD) begin
+        else if (~StallD & ~MemStall) begin
             InstrD <= InstrF;
             PCD    <= PCF;
         end
@@ -285,7 +286,7 @@ module RV #(
 
     // Pipeline register D -> E (FlushE inserts a bubble)
     always @(posedge CLK) begin
-        if (RESET | FlushE) begin
+        if (RESET | (FlushE & ~MemStall)) begin
             RegWriteE   <= 1'b0;
             MemtoRegE   <= 1'b0;
             MemWriteE   <= 1'b0;
@@ -305,7 +306,7 @@ module RV #(
             rs2E        <= 5'b0;
             rdE         <= 5'b0;
         end
-        else if (~StallE) begin
+        else if (~StallE & ~MemStall) begin
             RegWriteE   <= RegWriteD;
             MemtoRegE   <= MemtoRegD;
             MemWriteE   <= MemWriteD;
@@ -369,11 +370,23 @@ module RV #(
                     PCSrcE
                 );
 
+    // doom_soc: if MemStall freezes Execute in the cycle MCycle finishes, Start would still be high
+    // in the next cycle and MCycle would start the same operation again (its result registers are
+    // cleared by the load cycle). Hold Start off until Execute moves on; the results stay valid.
+    reg  MCycleDoneHold = 1'b0 ;
+    wire MCycleStartGated = MCycleStartE & ~MCycleDoneHold ;
+    always @(posedge CLK) begin
+        if (RESET | ~MemStall)
+            MCycleDoneHold <= 1'b0;
+        else if (MCycleStartE & ~MCycleBusy)
+            MCycleDoneHold <= 1'b1;
+    end
+
     // Instantiate MCycle
     MCycle #(.width(32)) MCycle1(
                     CLK,
                     RESET,
-                    MCycleStartE,
+                    MCycleStartGated,
                     MCycleOpE,
                     FwdRD1E,
                     FwdRD2E,
@@ -388,7 +401,7 @@ module RV #(
 
     // Pipeline register E -> M (FlushM inserts a bubble)
     always @(posedge CLK) begin
-        if (RESET | FlushM) begin
+        if (RESET | (FlushM & ~MemStall)) begin
             RegWriteM  <= 1'b0;
             MemtoRegM  <= 1'b0;
             MemWriteM  <= 1'b0;
@@ -398,7 +411,7 @@ module RV #(
             rdM        <= 5'b0;
             Funct3M    <= 3'b0;
         end
-        else begin
+        else if (~MemStall) begin
             RegWriteM  <= RegWriteE;
             MemtoRegM  <= MemtoRegE;
             MemWriteM  <= MemWriteE;
@@ -478,7 +491,7 @@ module RV #(
             ResultW    <= 32'b0;
             rdW        <= 5'b0;
         end
-        else begin
+        else if (~MemStall) begin
             RegWriteW  <= RegWriteM;
             MemtoRegW  <= MemtoRegM;
             ReadDataW  <= ReadDataM;
@@ -555,5 +568,8 @@ module RV #(
     assign FlushD = BranchTakenE ;
     assign FlushE = BranchTakenE | lwStall ;
     assign FlushM = MCycleBusy ;
+    // doom_soc: MemStall (from the caches, computed from F/M-stage registers only) overrides all of
+    // the above: PC and every pipeline register hold, nothing is flushed. RegFile writes from W repeat
+    // the same value while frozen, which is harmless.
 
 endmodule

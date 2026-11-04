@@ -458,7 +458,8 @@ RV #(.PC_INIT(PC_INIT)) RV1(
 	MemWrite_out,
 	PC,
 	ALUResult,
-	WriteData_out
+	WriteData_out,
+	1'b0            // MemStall: this memory never stalls the pipeline
 );
 
 endmodule

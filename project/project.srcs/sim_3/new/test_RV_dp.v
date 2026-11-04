@@ -25,7 +25,8 @@ module tb_RV_dp;
         .MemWrite_out(MemWrite_out),
         .PC(PC),
         .ALUResult(ALUResult),
-        .WriteData_out(WriteData_out)
+        .WriteData_out(WriteData_out),
+        .MemStall(1'b0)
     );
 
     // Clock generation
