@@ -46,7 +46,7 @@ module Decoder(
     					// Note that the most significant 3 bits are Funct3 for all DP instrns. LSB is the same as Funct[5] for DPReg type and DPImm_shifts. For other DPImms, Funct[5] is 0.
     					// It is the same as sub for branches, and add for all others not mentioned in the line above.
     output reg MCycleStart,		// Asserted by mul, mulh, mulhu, div, divu, rem, remu. Also tells the datapath to write back the MCycle result instead of ALUResult
-    output reg [1:0] MCycleOp,	// 00 for signed mul, 01 for unsigned mul, 10 for signed div, 11 for unsigned div
+    output reg [2:0] MCycleOp,	// 000 for signed mul, 001 for unsigned mul, 010 for signed div, 011 for unsigned div, 100 for signed x unsigned mul (mulhsu)
     output reg MCycleResultSel	// 0 for Result1 (mul, div, divu), 1 for Result2 (mulh, mulhu, rem, remu)
     );
 // Change wire to reg if assigned inside a procedural (always) block. However, where it is easy enough, use assign instead of always.
@@ -66,7 +66,7 @@ module Decoder(
         ImmSrc = 3'b000;
         ALUControl = 4'b0000;
         MCycleStart = 0;
-        MCycleOp = 2'b00;
+        MCycleOp = 3'b000;
         MCycleResultSel = 0;
         if (Opcode == 7'b0110011) begin
             // DP Reg
@@ -83,17 +83,14 @@ module Decoder(
                 // M extension (Funct7 = 0000001). ALUControl is unused; the MCycle result is written back instead
                 MCycleStart = 1;
                 case (Funct3)
-                    3'b000: begin MCycleOp = 2'b01; MCycleResultSel = 0; end // mul: low word is the same signed or unsigned, so use the faster unsigned mode
-                    3'b001: begin MCycleOp = 2'b00; MCycleResultSel = 1; end // mulh
-                    3'b011: begin MCycleOp = 2'b01; MCycleResultSel = 1; end // mulhu
-                    3'b100: begin MCycleOp = 2'b10; MCycleResultSel = 0; end // div
-                    3'b101: begin MCycleOp = 2'b11; MCycleResultSel = 0; end // divu
-                    3'b110: begin MCycleOp = 2'b10; MCycleResultSel = 1; end // rem
-                    3'b111: begin MCycleOp = 2'b11; MCycleResultSel = 1; end // remu
-                    default: begin // mulhsu not supported: treat as a no-op
-                        MCycleStart = 0;
-                        RegWrite = 0;
-                    end
+                    3'b000: begin MCycleOp = 3'b001; MCycleResultSel = 0; end // mul: low word is the same signed or unsigned, so use the faster unsigned mode
+                    3'b001: begin MCycleOp = 3'b000; MCycleResultSel = 1; end // mulh
+                    3'b010: begin MCycleOp = 3'b100; MCycleResultSel = 1; end // mulhsu: signed rs1 x unsigned rs2
+                    3'b011: begin MCycleOp = 3'b001; MCycleResultSel = 1; end // mulhu
+                    3'b100: begin MCycleOp = 3'b010; MCycleResultSel = 0; end // div
+                    3'b101: begin MCycleOp = 3'b011; MCycleResultSel = 0; end // divu
+                    3'b110: begin MCycleOp = 3'b010; MCycleResultSel = 1; end // rem
+                    3'b111: begin MCycleOp = 3'b011; MCycleResultSel = 1; end // remu
                 endcase
             end
 

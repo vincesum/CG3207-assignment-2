@@ -91,7 +91,7 @@ module RV #(
     wire [1:0]  ALUSrcBD ;
     wire [2:0]  ImmSrc ;            // used only by Extend in this stage
     wire        MCycleStartD ;
-    wire [1:0]  MCycleOpD ;
+    wire [2:0]  MCycleOpD ;
     wire        MCycleResultSelD ;
     // RegFile read ports
     wire [31:0] RD1D ;
@@ -110,7 +110,7 @@ module RV #(
     reg  [1:0]  ALUSrcAE ;
     reg  [1:0]  ALUSrcBE ;
     reg         MCycleStartE ;
-    reg  [1:0]  MCycleOpE ;
+    reg  [2:0]  MCycleOpE ;
     reg         MCycleResultSelE ;
     // Pipeline register D -> E: data
     reg  [31:0] PCE ;
@@ -295,7 +295,7 @@ module RV #(
             ALUSrcAE    <= 2'b0;
             ALUSrcBE    <= 2'b0;
             MCycleStartE     <= 1'b0;
-            MCycleOpE        <= 2'b0;
+            MCycleOpE        <= 3'b0;
             MCycleResultSelE <= 1'b0;
             PCE         <= 32'b0;
             RD1E        <= 32'b0;
