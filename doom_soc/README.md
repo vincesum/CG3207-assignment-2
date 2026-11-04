@@ -6,7 +6,7 @@ The base project is unchanged on this branch, so you can still open it and progr
 
 ## Run DOOM on the board
 
-These steps start from a fresh clone. Run the commands in Windows Command Prompt or PowerShell.
+These steps start from a fresh clone. The commands are for Windows Command Prompt or PowerShell; on Linux, use the versions under [Linux commands](#linux-commands).
 
 ### 1. What you need
 
@@ -20,8 +20,8 @@ These steps start from a fresh clone. Run the commands in Windows Command Prompt
 
 | Tool | Notes |
 |---|---|
-| Vivado **2018.2** | Use this version: the DDR2 IP in `vivado\ip` was generated with it. The commands below assume `C:\Xilinx\Vivado\2018.2`. |
-| RISC-V GCC with newlib | `riscv-none-elf-gcc`, `riscv-none-elf-objcopy` and `riscv-none-elf-size` must be on `PATH`. Check with `riscv-none-elf-gcc --version`. |
+| Vivado | **2023.2** builds this design from a clean clone, and **2018.2** built the earlier audio version. The Windows commands below assume `C:\Xilinx\Vivado\2018.2`, so change the path if yours differs. |
+| RISC-V GCC with newlib | Use the [xPack RISC-V toolchain](https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases); version 15.2.0 built the working DOOM binary. Unpack it and add its `bin` folder to `PATH`, then check with `riscv-none-elf-gcc --version`. |
 | Python 3 with pyserial | `python -m pip install --user pyserial` |
 
 ### 2. Get the code
@@ -67,7 +67,7 @@ Near the end of `vivado\build.log`, check these lines:
 | `TIMING: WNS=... WHS=...` | Both values are 0 or higher. If not, don't trust the bitstream. |
 | `BITSTREAM: ...doom_top.bit` | Present |
 
-The result is `vivado\doom_top.bit`. Reports are in `vivado\reports`, and you can open `vivado\proj\doom_soc.xpr` in the GUI after a successful build.
+The build took about 4 minutes on a 24-thread PC. The result is `vivado\doom_top.bit`. Reports are in `vivado\reports`, and you can open `vivado\proj\doom_soc.xpr` in the GUI after a successful build.
 
 ### 5. Program the board
 
@@ -101,8 +101,6 @@ This sends `doom1.wad` (about 30 s at 1.5 Mbaud) and `doom.bin` over USB, checks
 
 Leave the terminal open to play from the PC keyboard. **F12** closes the keyboard link, and DOOM keeps running.
 
-On Linux or macOS, use a port such as `/dev/ttyUSB1`. Keyboard forwarding is Windows only, so play with the board's buttons and switches.
-
 ### 7. Start a game
 
 1. Press **Esc** on the keyboard, or flip **SW15** on the board, to open the menu.
@@ -131,6 +129,27 @@ python host\load.py --port COM4 --prog sw\build\apps\audio_test\audio_test.bin -
 
 Press CPU_RESET and do the normal load to return to DOOM.
 
+### Linux commands
+
+These replace the commands in steps 3 to 6. Run them from `doom_soc`, and change the Vivado path and toolchain path to match your install:
+
+```
+export PATH=/path/to/xpack-riscv-none-elf-gcc/bin:$PATH
+python3 sw/build.py all --clean
+
+cd vivado
+/tools/Xilinx/Vivado/2023.2/bin/vivado -mode batch -nojournal -log build.log -source build.tcl
+cd ..
+
+/tools/Xilinx/Vivado/2023.2/bin/vivado -mode batch -nojournal -nolog -source vivado/program.tcl
+
+ls /dev/ttyUSB*
+python3 host/load.py --port /dev/ttyUSB1
+```
+
+- **Serial port:** the board shows up as two ports, and the UART is usually the higher-numbered one. If the ping fails, press CPU_RESET and try the other. Your user needs to be in the `dialout` group.
+- **Controls:** keyboard forwarding is Windows only, so play with the board's buttons and switches.
+
 ### Troubleshooting
 
 | Symptom | What to check |
@@ -138,6 +157,7 @@ Press CPU_RESET and do the normal load to return to DOOM.
 | `ping (is the board in the boot ROM? press CPU_RESET)` | Press CPU_RESET, check that LED7 is on, and check the COM port. |
 | `could not open port` or access denied | Another program has the port open, such as an earlier `load.py` or a serial terminal. Close it. |
 | `ModuleNotFoundError: serial` | Install pyserial (step 1). |
+| Vivado can't find the board on Linux | Install the cable drivers once, as root, by running `data/xicom/cable_drivers/lin64/install_script/install_drivers/install_drivers` from the Vivado folder. Then reconnect the board. |
 | LED15 stays off | DDR2 hasn't calibrated. Power cycle the board and program it again. |
 | LED5 is on, or `too many errors` | Checksum errors on the USB link. Press CPU_RESET, reload, and try another cable or USB port. |
 | OLED stays black | Check that the Pmod is in JB, then check the terminal for DOOM's startup messages. |
@@ -193,6 +213,13 @@ Icarus Verilog can't run `sim\tb_soc.v` directly because it uses DPI for DDR2. I
 | Frames → PNG sheet | `python tools\frames.py DIR` |
 | Lint + yosys cell count | `python tools\rtl_check.py` |
 | Loader byte stream for simulation | `python host\load.py --emit stream.bin [--prog X.bin --no-wad]` |
+
+Results for the current core, in this repository:
+
+- Vivado 2023.2 from a clean clone: timing met (WNS +1.312 ns, WHS +0.025 ns), 11,550 LUTs (18 %), 20 block RAMs.
+- `project/project.srcs/sim_1/new/test_RV_muldiv_stall.v`: 6,400 mul/div checks pass with and without random MemStall.
+- DOOM startup on the RTL with Icarus Verilog, through `M_Init`: 2.1 M register writes match the ISS, with no DDR2 model errors.
+- Not yet checked on this core: riscv-tests, gameplay on the RTL, and a run on the board.
 
 Results (2026-10-29, on the earlier copy of the core, before audio; see `docs/DOOM_SoC_Change_Log.docx`): riscv-tests 48/48 on ISS and on the RTL SoC; hello world through boot ROM + UART;
 DOOM lockstep RTL = ISS for 7.57 M register writes; DOOM demo on RTL ≈ **24 fps** at 37.5 MHz
