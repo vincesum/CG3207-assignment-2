@@ -27,7 +27,7 @@ The bitstream is saved as `doom_soc/vivado/doom_top.bit`.
 
 ## 3. Program the board
 
-1. Connect the board over USB and turn it on.
+1. Plug the display into JB, then connect the board over USB and turn it on. The display must be plugged in before you program the board.
 2. In Vivado, choose **Flow > Open Hardware Manager**.
 3. Click **Open target > Auto Connect**.
 4. Click **Program device**, select `doom_soc/vivado/doom_top.bit`, and click **Program**.
@@ -87,6 +87,6 @@ To restart, press the red **CPU_RESET** button and run the `load.py` command aga
 | Can't open the serial port | Close anything else using it, such as an earlier `load.py`. On Linux, your user needs to be in the `dialout` group. |
 | The Tcl script stops straight away | Close any open project in Vivado and run it again. |
 | Vivado can't find the board | Check the USB cable and that the board is on. You may need to install Vivado's cable drivers. |
-| The display stays black | Check that the display is plugged into JB. |
+| The display stays black | Check that the display is fully seated in JB, using both rows of pins. If you plugged it in after programming, press CPU_RESET and run `load.py` again. |
 
 The technical details are in [doom_soc/README.md](doom_soc/README.md).
