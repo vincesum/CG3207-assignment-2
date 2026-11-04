@@ -5,3 +5,4 @@ reports/
 soc_top.bit
 *.log
 *.jou
+proj_post_synth/

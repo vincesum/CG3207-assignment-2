@@ -442,7 +442,7 @@ Elsewhere in the repository:
 | Path | Contents |
 |---|---|
 | `soc_build/` | Scripts that create the Vivado project and generate the bitstream |
-| `project/project.srcs/sim_1/new/` | Testbenches, including `test_RV_muldiv_stall.v` for mul/div with `MemStall`, and `test_soc_audio.v` |
+| `project/project.srcs/sim_1/new/` | Testbenches and their test programs. `run_tests.sh` runs them all with Icarus Verilog, and `test_soc.v` tests the whole SoC against a DDR2 model |
 | `legacy/` | Older assembly programs from earlier assignments |
 
 The lab design (`TOP_Nexys.vhd` and `Wrapper.v`) is a separate, simpler system that uses the same processor with small built-in memories and `MemStall` tied to 0. It's what the local Vivado project in `project/` builds.

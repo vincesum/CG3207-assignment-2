@@ -3,11 +3,11 @@
 ----------------------------------------------------------------------------------
 -- Module Name: test_Wrapper_muldiv
 -- Project Name: CG3207 Project
--- Description: Self-checking testbench for testmuldiv.asm (Assignment 3, mul / divu).
+-- Description: Self-checking testbench for test_muldiv.asm (Assignment 3, mul / divu).
 --              Waits for the program to reach display_loop, then checks
 --              1. LED_OUT = pass mask from the program (expect 0xFF)
 --              2. SEVENSEGHEX = results[DIP[2:0]] for every DIP[2:0] = 0..7
---              AA_IROM.mem / AA_DMEM.mem must hold the dumps of testmuldiv.asm.
+--              Program: test_muldiv.asm, assembled into test_muldiv_irom.mem and test_muldiv_dmem.mem.
 ----------------------------------------------------------------------------------
 */
 
@@ -15,7 +15,7 @@ module test_Wrapper_muldiv #(
 	   parameter N_LEDs_OUT	= 8,
 	   parameter N_DIPs		= 16,
 	   parameter N_PBs		= 3,
-	   parameter DISPLAY_LOOP_PC = 7'h2E,	// LED_PC (PC[8:2]) of display_loop in testmuldiv.asm (0x004000B8). Update if the program changes
+	   parameter DISPLAY_LOOP_PC = 7'h2E,	// LED_PC (PC[8:2]) of display_loop in test_muldiv.asm (0x004000B8). Update if the program changes
 	   parameter TIMEOUT = 20000			// ns to wait for display_loop before giving up
 	)
 	(
@@ -70,7 +70,11 @@ module test_Wrapper_muldiv #(
 	// STIMULI
     initial
     begin
-	RESET = 1; #10; RESET = 0; //hold reset state for 10 ns.
+	RESET = 1;
+	#1;	// after Wrapper has loaded its default program
+	$readmemh("test_muldiv_irom.mem", dut.IROM);
+	$readmemh("test_muldiv_dmem.mem", dut.DMEM);
+	#9; RESET = 0; //hold reset state for 10 ns.
 	$display("[%0t] Starting testmuldiv testbench", $time);
 
 		// 1. Wait for the program to finish the tests and reach display_loop
@@ -86,6 +90,7 @@ module test_Wrapper_muldiv #(
 			end
 		join
 		$display("[%0t] Reached display_loop. MCycle stall cycles so far: %0d", $time, stall_cycles);
+		#50;	// the store to the LEDs is still in the pipeline when display_loop is fetched
 
 		// 2. Pass mask on the LEDs. Test i is bit 7-i
 		if (LED_OUT == 8'hFF)
@@ -113,9 +118,9 @@ module test_Wrapper_muldiv #(
 		// Final summary
 		$display("\n=== SUMMARY ===");
 		if (fail_count == 0)
-			$display("*** ALL TESTS PASSED ***");
+			$display("==== test_Wrapper_muldiv: PASS ====");
 		else
-			$display("*** %0d CHECKS FAILED ***", fail_count);
+			$display("==== test_Wrapper_muldiv: FAIL (%0d) ====", fail_count);
 		$display("===============\n");
 		$finish;
     end
