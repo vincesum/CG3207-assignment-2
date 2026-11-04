@@ -145,7 +145,6 @@ cd ../doom_soc
 
 /tools/Xilinx/Vivado/2023.2/bin/vivado -mode batch -nojournal -nolog -source ../soc_build/program.tcl
 
-ls /dev/ttyUSB*
 python3 host/load.py --port /dev/ttyUSB1
 ```
 

@@ -7,7 +7,8 @@ Run DOOM on a Nexys A7 using the RISC-V processor and hardware from the `master`
 - Nexys A7-100T board and its USB cable. The 50T version won't work.
 - PmodOLEDrgb display plugged into port **JB**
 - Vivado
-- Python 3 and Git
+- Git
+- Python 3 with pyserial: `python3 -m pip install --user pyserial`
 - Optional: speakers or headphones on the audio jack, for sound effects
 
 ## 1. Get the code
@@ -36,25 +37,13 @@ Once it's programmed, LED15 and LED14 should be on.
 
 ## 4. Load DOOM
 
-From the repository folder, run these commands in a terminal.
-
-**Linux**
+From the repository folder, run:
 
 ```
-python3 -m pip install --user pyserial
-python3 -m serial.tools.list_ports
 python3 doom_soc/host/load.py --port /dev/ttyUSB1
 ```
 
-**Windows**
-
-```
-python -m pip install --user pyserial
-python -m serial.tools.list_ports
-python doom_soc/host/load.py --port COM4
-```
-
-The second command lists the serial ports. Use the board's port in the third command in place of `/dev/ttyUSB1` or `COM4`.
+On Windows, use `python` and the board's COM port, such as `COM4`.
 
 Loading takes about 40 seconds, and then DOOM starts on the display. On Linux, press **Ctrl+C** to get your terminal back; DOOM keeps running.
 
@@ -83,7 +72,7 @@ To restart, press the red **CPU_RESET** button and run the `load.py` command aga
 
 | Problem | Try this |
 |---|---|
-| `ping (is the board in the boot ROM?...)` | Press CPU_RESET and run `load.py` again. If that fails, try the other serial port from the list. |
+| `ping (is the board in the boot ROM?...)` | Press CPU_RESET and run `load.py` again. If that fails, run `python3 -m serial.tools.list_ports` and try the board's other port. |
 | Can't open the serial port | Close anything else using it, such as an earlier `load.py`. On Linux, your user needs to be in the `dialout` group. |
 | The Tcl script stops straight away | Close any open project in Vivado and run it again. |
 | Vivado can't find the board | Check the USB cable and that the board is on. You may need to install Vivado's cable drivers. |
