@@ -3,7 +3,6 @@
 
   python build.py doom          -> build/doom/doom.elf, doom.bin (load at 0x80000000)
   python build.py boot          -> build/boot/boot.elf, boot.hex (boot ROM image, $readmemh words)
-  python build.py app NAME      -> build/apps/NAME/NAME.elf from tests/NAME.c (small test programs)
   python build.py all
 Options: -j N (parallel jobs), --clean
 """
@@ -118,24 +117,9 @@ def build_boot(jobs):
     print('->', os.path.join(out, 'boot.hex'))
 
 
-def build_app(jobs, name):
-    out = os.path.join(BUILD, 'apps', name)
-    srcs = [os.path.join(HERE, 'tests', name + '.c'), os.path.join(COMMON, 'syscalls.c'),
-            os.path.join(COMMON, 'crt0.S')]
-    objs = compile_all(jobs, os.path.join(out, 'obj'), srcs, ['-I', COMMON])
-    elf = os.path.join(out, name + '.elf')
-    run([CC] + ARCH + ['-nostartfiles', '-T', os.path.join(COMMON, 'link_doom.ld'), '-Wl,--gc-sections',
-                       '-o', elf] + objs + ['-lm', '-lc', '-lgcc'])
-    check_doom_entry(elf)
-    run([OBJCOPY, '-O', 'binary', elf, os.path.join(out, name + '.bin')])
-    print(run([SIZE, elf]).strip())
-    print('->', elf)
-
-
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('what', choices=['doom', 'boot', 'app', 'all'])
-    ap.add_argument('name', nargs='?')
+    ap.add_argument('what', choices=['doom', 'boot', 'all'])
     ap.add_argument('-j', type=int, default=os.cpu_count() or 4)
     ap.add_argument('--clean', action='store_true')
     a = ap.parse_args()
@@ -145,8 +129,6 @@ def main():
         build_doom(a.j)
     if a.what in ('boot', 'all'):
         build_boot(a.j)
-    if a.what == 'app':
-        build_app(a.j, a.name)
 
 
 if __name__ == '__main__':

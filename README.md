@@ -43,7 +43,7 @@ From the repository folder, run:
 python3 doom_soc/host/load.py --port /dev/ttyUSB1
 ```
 
-On Windows, use `python` and the board's COM port, such as `COM4`.
+On Windows, use `python` instead of `python3` here and in the pyserial command, and the board's COM port, such as `COM4`.
 
 Loading takes about 40 seconds, and then DOOM starts on the display. On Linux, press **Ctrl+C** to get your terminal back; DOOM keeps running.
 
