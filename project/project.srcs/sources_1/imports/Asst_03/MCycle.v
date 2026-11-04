@@ -136,7 +136,9 @@ module MCycle
         // The first cycle only loads the operands (above). The computation starts in the next cycle,
         // so the forwarded operands do not feed the sign handling and the first add/subtract in the
         // same cycle. This shortens the critical path at the cost of one extra cycle per mul/div.
-        else if( state == COMPUTING ) begin
+        // ~done: don't run another iteration in the cycle the result is ready. A divide would overwrite
+        // its result, which matters if MemStall holds the instruction in Execute during that cycle.
+        else if( state == COMPUTING && ~done ) begin
         done <= 1'b0 ;   
         
         if( ~MCycleOp[1] ) begin // Multiply
