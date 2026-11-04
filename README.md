@@ -441,8 +441,8 @@ Elsewhere in the repository:
 
 | Path | Contents |
 |---|---|
-| `soc_build/` | Scripts that create the Vivado project and generate the bitstream |
-| `project/project.srcs/sim_1/new/` | Testbenches and their test programs. `run_tests.sh` runs them all with Icarus Verilog, and `test_soc.v` tests the whole SoC against a DDR2 model |
+| `soc_build/` | `build.tcl`, which creates the Vivado project and generates the bitstream |
+| `project/project.srcs/sim_1/new/` | Testbenches and their test programs. `test_soc.v` tests the whole SoC against a DDR2 model |
 | `legacy/` | Older assembly programs from earlier assignments |
 
 The lab design (`TOP_Nexys.vhd` and `Wrapper.v`) is a separate, simpler system that uses the same processor with small built-in memories and `MemStall` tied to 0. It's what the local Vivado project in `project/` builds.
@@ -453,6 +453,10 @@ The lab design (`TOP_Nexys.vhd` and `Wrapper.v`) is a separate, simpler system t
 2. Choose **Tools > Run Tcl Script**, then select `soc_build/build.tcl`.
 3. Wait for it to finish. This can take several minutes, and Vivado may look frozen while it runs.
 
-The bitstream is saved as `soc_build/soc_top.bit`. After the first run, you can open `soc_build/proj/rv_soc.xpr` and use **Generate Bitstream** as usual.
+The bitstream is saved as `soc_build/soc_top.bit`. The script also creates the project `soc_build/proj/rv_soc.xpr`, with all the source files and testbenches in it, so you can open that and work in the GUI as usual.
+
+After pulling new changes, run the script again to pick up any new files. It replaces that project, but not your source files.
+
+To simulate, open the project, right-click a testbench under **Simulation Sources**, and choose **Set as Top**. `test_soc` is the default. Then click **Run Simulation** and type `run all` in the Tcl Console. Each testbench prints `PASS` or `FAIL` at the end.
 
 The design targets the Nexys A7-100T (also sold as the Nexys 4 DDR). Plug the PmodOLEDrgb into JB before programming the board.
