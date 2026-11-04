@@ -50,7 +50,7 @@ module RV #(
     output [31:0] PC,
     output [31:0] ALUResult,
     output [31:0] WriteData_out,	// Name mangled to support sb/sw
-    input MemStall                  // doom_soc: freeze the whole pipeline (cache miss / memory busy)
+    input MemStall                  // Freeze the whole pipeline (cache miss / memory busy)
 );
     
     // Please read Lab 4 Enhancement: Implementing additional instructions on how to support lb/lbu/lh/lhu/sb/sh
@@ -370,7 +370,7 @@ module RV #(
                     PCSrcE
                 );
 
-    // doom_soc: if MemStall freezes Execute in the cycle MCycle finishes, Start would still be high
+    // If MemStall freezes Execute in the cycle MCycle finishes, Start would still be high
     // in the next cycle and MCycle would start the same operation again (its result registers are
     // cleared by the load cycle). Hold Start off until Execute moves on; the results stay valid.
     reg  MCycleDoneHold = 1'b0 ;
@@ -568,7 +568,7 @@ module RV #(
     assign FlushD = BranchTakenE ;
     assign FlushE = BranchTakenE | lwStall ;
     assign FlushM = MCycleBusy ;
-    // doom_soc: MemStall (from the caches, computed from F/M-stage registers only) overrides all of
+    // MemStall (from the caches, computed from F/M-stage registers only) overrides all of
     // the above: PC and every pipeline register hold, nothing is flushed. RegFile writes from W repeat
     // the same value while frozen, which is harmless.
 
