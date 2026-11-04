@@ -1,3 +1,5 @@
+> **Note:** this page describes the project before the hardware moved to the `master` branch. The bitstream is now built with `soc_build/build.tcl`; see [the README](../README.md) for current steps.
+
 # Doom audio addition
 
 This source update adds eight-channel mono sound effects through the Nexys 4 DDR / Nexys A7 J8 3.5 mm audio output. Music is not implemented.
@@ -79,7 +81,7 @@ gcc -std=gnu99 -Wall -Wextra -Werror -I third_party/doomgeneric/doomgeneric -I s
 An RTL testbench is included for Icarus Verilog:
 
 ```
-iverilog -g2005-sv -s tb_audio -o audio_test.vvp rtl/soc/doom_audio.v tests/tb_audio.v
+iverilog -g2005-sv -s tb_audio -o audio_test.vvp ../project/project.srcs/sources_1/soc/io/soc_audio.v ../project/project.srcs/sim_1/new/test_soc_audio.v
 vvp audio_test.vvp
 ```
 

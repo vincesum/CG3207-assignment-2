@@ -1,6 +1,6 @@
 # doom_soc — DOOM on the CG3207 RV32IM pipeline (Nexys 4 DDR, 96×64 PmodOLEDrgb)
 
-SoC built around the base processor in `project/` at the top of this repository. There is no separate copy of the core: the Vivado build and the simulations use `project/project.srcs/sources_1/imports` directly. Merge `master` into this branch to pick up core changes; don't merge this branch into `master`.
+All the hardware lives on the `master` branch: the processor is in `project/project.srcs/sources_1/imports`, and the caches, DDR2 interface, peripherals and top level are in `project/project.srcs/sources_1/soc`. This folder only holds what's needed to run DOOM on it: the game, the boot ROM source, the PC loader and the simulation tools. Merge `master` into this branch to pick up hardware changes; don't merge this branch into `master`.
 
 The base project is unchanged on this branch, so you can still open it and program the board as usual. Its `project.xpr` is not in git and stays in your working copy.
 
@@ -37,7 +37,7 @@ Run the remaining commands from `doom_soc` unless a step says otherwise.
 
 ### 3. Build the software
 
-This step is optional unless you've changed the software: `prebuilt/` holds a ready-made `boot.hex` and `doom.bin`, and the build and loader use them when `sw\build` doesn't exist.
+This step is optional unless you've changed the software: `prebuilt\doom.bin` is ready to load, and the loader uses it when `sw\build` doesn't exist.
 
 ```
 python sw\build.py all --clean
@@ -49,34 +49,34 @@ This creates `sw\build\doom\doom.bin` and the boot ROM image `sw\build\boot\boot
 Startup verified: _start / ELF entry = 0x80000000
 ```
 
-Build the software first: the Vivado build copies `boot.hex` into the bitstream and stops if the file is missing. If you later change anything under `sw\boot`, rebuild the bitstream as well. Changes to DOOM itself only need this step.
+Changes to DOOM itself only need this step. If you change anything under `sw\boot`, copy `sw\build\boot\boot.hex` over `project\project.srcs\sources_1\soc\memory\boot.mem` on `master`, then rebuild the bitstream.
 
 ### 4. Build the bitstream
 
 Close any open copy of this Vivado project, then run:
 
 ```
-cd vivado
+cd ..\soc_build
 C:\Xilinx\Vivado\2018.2\bin\vivado.bat -mode batch -nojournal -log build.log -source build.tcl
-cd ..
+cd ..\doom_soc
 ```
 
-Near the end of `vivado\build.log`, check these lines:
+Near the end of `soc_build\build.log`, check these lines:
 
 | Line | What to look for |
 |---|---|
 | `DDR_MODE: original generated RTL and XDC ...` | Present |
 | `TIMING: WNS=... WHS=...` | Both values are 0 or higher. If not, don't trust the bitstream. |
-| `BITSTREAM: ...doom_top.bit` | Present |
+| `BITSTREAM: ...soc_top.bit` | Present |
 
-The build took about 4 minutes on a 24-thread PC. The result is `vivado\doom_top.bit`. Reports are in `vivado\reports`, and you can open `vivado\proj\doom_soc.xpr` in the GUI after a successful build.
+The build took about 4 minutes on a 24-thread PC. The result is `soc_build\soc_top.bit`. Reports are in `soc_build\reports`, and you can open `soc_build\proj\rv_soc.xpr` in the GUI after a successful build.
 
 ### 5. Program the board
 
-Connect the USB cable, turn the board on, and leave the switches down. Then either use Vivado's Hardware Manager to program `vivado\doom_top.bit`, or run:
+Connect the USB cable, turn the board on, and leave the switches down. Then either use Vivado's Hardware Manager to program `soc_build\soc_top.bit`, or run:
 
 ```
-C:\Xilinx\Vivado\2018.2\bin\vivado.bat -mode batch -nojournal -nolog -source vivado\program.tcl
+C:\Xilinx\Vivado\2018.2\bin\vivado.bat -mode batch -nojournal -nolog -source ..\soc_build\program.tcl
 ```
 
 Programming lasts until the board loses power, so repeat this step after a power cycle.
@@ -139,11 +139,11 @@ These replace the commands in steps 3 to 6. Run them from `doom_soc`, and change
 export PATH=/path/to/xpack-riscv-none-elf-gcc/bin:$PATH
 python3 sw/build.py all --clean
 
-cd vivado
+cd ../soc_build
 /tools/Xilinx/Vivado/2023.2/bin/vivado -mode batch -nojournal -log build.log -source build.tcl
-cd ..
+cd ../doom_soc
 
-/tools/Xilinx/Vivado/2023.2/bin/vivado -mode batch -nojournal -nolog -source vivado/program.tcl
+/tools/Xilinx/Vivado/2023.2/bin/vivado -mode batch -nojournal -nolog -source ../soc_build/program.tcl
 
 ls /dev/ttyUSB*
 python3 host/load.py --port /dev/ttyUSB1
@@ -164,7 +164,6 @@ python3 host/load.py --port /dev/ttyUSB1
 | LED5 is on, or `too many errors` | Checksum errors on the USB link. Press CPU_RESET, reload, and try another cable or USB port. |
 | OLED stays black | Check that the Pmod is in JB, then check the terminal for DOOM's startup messages. |
 | Terminal freezes at startup, with no DOOM messages | Rebuild with `python sw\build.py doom --clean` and confirm the `Startup verified` line. See [docs/AUDIO_STARTUP_FIX.md](docs/AUDIO_STARTUP_FIX.md). |
-| `missing ...boot.hex` | Do step 3 before step 4. |
 | Vivado `Project 1-863`, or MIG generation hangs | Run `build.tcl` as in step 4 rather than opening an older project. See [docs/DDR_FIX_README.md](docs/DDR_FIX_README.md). |
 
 ### Go back to the base processor
@@ -188,11 +187,11 @@ The lab project works as usual on this branch. Open your local `project/project.
 | Block | File | Notes |
 |---|---|---|
 | CPU | `../project/project.srcs/sources_1/imports` | The base processor, including mulhsu and **MemStall** (tied to 0 in the lab Wrapper) |
-| Caches + boot ROM | `rtl\soc\memctl.v`, `dm_cache.v` | 8 KB I + 8 KB D, direct-mapped, 16 B lines, LUTRAM (async read: pipeline unchanged). D: write-through, no write-allocate, posted writes. MemStall from F/M registers only |
-| MIG bridge | `rtl\soc\mig_bridge.v` | toggle handshake CPU (37.5 MHz) ↔ ui_clk (75 MHz), related clocks from one MMCM → no CDC |
-| MMIO | `rtl\soc\mmio.v`, `uart.v` | Wrapper offsets; side effects only on commit; UART 1.5 Mbaud (37.5 MHz / 25, exact for the FT2232 too) + 512 B RX FIFO; OLED CTRL write re-arms auto-advance; PB[4:0]; counters 0xB0–0xBC |
-| SoC | `rtl\soc\doom_soc.v` | board-independent |
-| Top | `rtl\top\doom_top.v`, `vivado\doom_top.xdc` | MMCM 100→200 MHz, MIG (`ddr` IP copied from `ddr2_bringup`), MMCM ui_clk→37.5 MHz, OLED, 7-seg |
+| Caches + boot ROM | `soc\memory\memctl.v`, `dm_cache.v` | 8 KB I + 8 KB D, direct-mapped, 16 B lines, LUTRAM (async read: pipeline unchanged). D: write-through, no write-allocate, posted writes. MemStall from F/M registers only |
+| MIG bridge | `soc\memory\mig_bridge.v` | toggle handshake CPU (37.5 MHz) ↔ ui_clk (75 MHz), related clocks from one MMCM → no CDC |
+| MMIO | `soc\io\mmio.v`, `uart.v` | Wrapper offsets; side effects only on commit; UART 1.5 Mbaud (37.5 MHz / 25, exact for the FT2232 too) + 512 B RX FIFO; OLED CTRL write re-arms auto-advance; PB[4:0]; counters 0xB0–0xBC |
+| SoC | `soc\rv_soc.v` | board-independent |
+| Top | `soc\soc_top.v`, `soc\soc_top.xdc` | MMCM 100→200 MHz, MIG (`ddr` IP copied from `ddr2_bringup`), MMCM ui_clk→37.5 MHz, OLED, 7-seg |
 
 Memory map: boot ROM `0x0040_0000` (4 KB) · DDR2 `0x8000_0000` (128 MB: program, heap, stack top `0x86FF_0000`, WAD header `0x86FF_FFF0`, WAD `0x8700_0000`) · MMIO `0xFFFF_0000`.
 
@@ -221,7 +220,8 @@ Results for the current core, in this repository:
 - Vivado 2023.2 from a clean clone: timing met (WNS +1.312 ns, WHS +0.025 ns), 11,550 LUTs (18 %), 20 block RAMs.
 - `project/project.srcs/sim_1/new/test_RV_muldiv_stall.v`: 6,400 mul/div checks pass with and without random MemStall.
 - DOOM startup on the RTL with Icarus Verilog, through `M_Init`: 2.1 M register writes match the ISS, with no DDR2 model errors.
-- Not yet checked on this core: riscv-tests, gameplay on the RTL, and a run on the board.
+- On the board (Nexys A7): DOOM runs, with picture on the OLED and sound.
+- Not yet checked on this core: riscv-tests and gameplay on the RTL.
 
 Results (2026-10-29, on the earlier copy of the core, before audio; see `docs/DOOM_SoC_Change_Log.docx`): riscv-tests 48/48 on ISS and on the RTL SoC; hello world through boot ROM + UART;
 DOOM lockstep RTL = ISS for 7.57 M register writes; DOOM demo on RTL ≈ **24 fps** at 37.5 MHz

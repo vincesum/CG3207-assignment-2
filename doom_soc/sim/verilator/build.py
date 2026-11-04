@@ -2,7 +2,7 @@
 """Build the Verilator model of doom_soc (sim/tb_soc.v + sim/verilator/tb_main.cpp).
 
   python build.py [--rom HEXFILE] [--out NAME] [-j N]
-Default ROM: sw/build/boot/boot.hex. Output: sim/verilator/<NAME>.exe (default tb_soc).
+Default ROM: the boot ROM on master, or sw/build/boot/boot.hex if you've built it. Output: sim/verilator/<NAME>.exe (default tb_soc).
 Uses OSS CAD Suite verilator_bin + MSYS2 mingw64 g++ (no make/perl needed).
 """
 import argparse, glob, os, subprocess, sys
@@ -10,6 +10,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
+SOC = os.path.join(ROOT, '..', 'project', 'project.srcs', 'sources_1', 'soc')
+SOC_SRCS = [os.path.join(SOC, 'rv_soc.v')] + sorted(glob.glob(os.path.join(SOC, 'memory', '*.v'))) + sorted(glob.glob(os.path.join(SOC, 'io', '*.v')))
 CORE = os.path.join(ROOT, '..', 'project', 'project.srcs', 'sources_1', 'imports')
 CORE_SRCS = [os.path.join(CORE, 'Asst_02', f + '.v') for f in ('ALU', 'Decoder', 'Extend', 'PC_Logic', 'ProgramCounter', 'RegFile', 'RV', 'Shifter')] + [os.path.join(CORE, 'Asst_03', 'MCycle.v')]
 VROOT = r'C:\oss-cad-suite\share\verilator'
@@ -28,7 +30,8 @@ def run(cmd, env=None):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--rom', default=os.path.join(ROOT, 'sw', 'build', 'boot', 'boot.hex'))
+    rom = os.path.join(ROOT, 'sw', 'build', 'boot', 'boot.hex')
+    ap.add_argument('--rom', default=rom if os.path.exists(rom) else os.path.join(SOC, 'memory', 'boot.mem'))
     ap.add_argument('--out', default='tb_soc')
     ap.add_argument('-j', type=int, default=os.cpu_count() or 8)
     a = ap.parse_args()
@@ -40,7 +43,7 @@ def main():
     os.makedirs(mdir, exist_ok=True)
 
     srcs = [os.path.join(ROOT, 'sim', 'tb_soc.v')]
-    srcs += sorted(glob.glob(os.path.join(ROOT, 'rtl', 'soc', '*.v')))
+    srcs += SOC_SRCS
     srcs += CORE_SRCS
     rom = os.path.abspath(a.rom).replace('\\', '/')
     out = run([VBIN, '--cc', '--top-module', 'tb_soc', '-Mdir', mdir, '--prefix', 'Vtb_soc',

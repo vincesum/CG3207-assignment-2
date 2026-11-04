@@ -5,10 +5,6 @@ build_rtl/
 sim/verilator/obj_*/
 host/venv/
 host/.vscode/
-vivado/proj/
-vivado/.Xil/
-vivado/reports/
-vivado/doom_top.bit
 *.exe
 # The top-level .gitignore skips *.txt
 !sim/play_input.txt

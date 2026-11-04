@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 // -----------------------------------------------------------------------------
-// tb_soc: Verilator top for doom_soc. Clocks, UART and OLED are handled by the C++
+// tb_soc: Verilator top for rv_soc. Clocks, UART and OLED are handled by the C++
 // harness (sim/verilator/tb_main.cpp); DDR2 contents live in C++ (DPI).
 //
 // MIG model: behavioural app_* interface like ddr2_bringup/sim/tb_ddr_tester.v -
@@ -8,7 +8,7 @@
 // masks, Strict ordering (one command at a time, in order), calibration delay.
 // -----------------------------------------------------------------------------
 module tb_soc #(
-    parameter ROM_FILE = "boot.hex",
+    parameter ROM_FILE = "boot.mem",
     parameter RD_LAT   = 22,            // ui_clk cycles from read command to data
     parameter CAL_CYC  = 200            // ui_clk cycles before calibration completes
 )(
@@ -61,7 +61,7 @@ module tb_soc #(
     reg  [127:0] app_rd_data = 128'd0;
     reg          app_rd_data_valid = 1'b0;
 
-    doom_soc #(.ROM_FILE(ROM_FILE)) soc (
+    rv_soc #(.ROM_FILE(ROM_FILE)) soc (
         .clk(clk_cpu), .rst(rst), .ui_clk(clk_ui), .ui_rst(ui_rst),
         .dip(dip), .pb(pb), .led(led), .sevenseg(sevenseg),
         .uart_rxd(uart_rxd), .uart_txd(uart_txd),

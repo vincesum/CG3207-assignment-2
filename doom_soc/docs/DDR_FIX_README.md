@@ -1,3 +1,5 @@
+> **Note:** this page describes the project before the hardware moved to the `master` branch. The bitstream is now built with `soc_build/build.tcl`; see [the README](../README.md) for current steps.
+
 # DDR build correction: original generated RTL
 
 The earlier direct ddr.dcp import caused Vivado Project 1-863. That approach has been removed. This build imports neither ddr.xci nor ddr.dcp, so it neither launches MIG generation nor uses an OOC checkpoint as a direct source.

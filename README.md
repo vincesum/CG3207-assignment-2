@@ -1,6 +1,6 @@
 # DOOM on our RISC-V processor
 
-Run DOOM on a Nexys A7 using the RISC-V processor from the `master` branch. The game shows on a small OLED display and you play with the board's buttons.
+Run DOOM on a Nexys A7 using the RISC-V processor and hardware from the `master` branch. This branch adds the game itself. The game shows on a small OLED display and you play with the board's buttons.
 
 ## What you need
 
@@ -20,17 +20,17 @@ cd CG3207-assignment-2
 ## 2. Generate the bitstream
 
 1. Open Vivado, without opening a project.
-2. Choose **Tools > Run Tcl Script**, then select `doom_soc/vivado/build.tcl`.
+2. Choose **Tools > Run Tcl Script**, then select `soc_build/build.tcl`.
 3. Wait for it to finish. This can take several minutes, and Vivado may look frozen while it runs.
 
-The bitstream is saved as `doom_soc/vivado/doom_top.bit`.
+The bitstream is saved as `soc_build/soc_top.bit`.
 
 ## 3. Program the board
 
 1. Plug the display into JB, then connect the board over USB and turn it on. The display must be plugged in before you program the board.
 2. In Vivado, choose **Flow > Open Hardware Manager**.
 3. Click **Open target > Auto Connect**.
-4. Click **Program device**, select `doom_soc/vivado/doom_top.bit`, and click **Program**.
+4. Click **Program device**, select `soc_build/soc_top.bit`, and click **Program**.
 
 Once it's programmed, LED15 and LED14 should be on.
 

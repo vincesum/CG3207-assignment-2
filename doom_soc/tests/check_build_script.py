@@ -1,9 +1,9 @@
 """Structural Tcl test with mocked Vivado commands; NOT a Vivado execution."""
 from pathlib import Path
 import tkinter
-root = Path(__file__).resolve().parents[1]
+root = Path(__file__).resolve().parents[2]
 tcl = tkinter.Tcl()
-src = (root/'vivado/build.tcl').read_text()
+src = (root/'soc_build/build.tcl').read_text()
 assert tcl.call('info','complete',src) == 1
 calls = []
 def command(name):
@@ -18,7 +18,7 @@ for name in ['create_project','set_property','add_files','get_files','current_pr
     tcl.createcommand(name,command(name))
 tcl.eval('set argv {}')
 tcl.eval('proc launch_runs {args} {error BUILD_TEST_STOP_BEFORE_SYNTHESIS}')
-try: tcl.call('source',str(root/'vivado/build.tcl'))
+try: tcl.call('source',str(root/'soc_build/build.tcl'))
 except tkinter.TclError as e:
     assert 'BUILD_TEST_STOP_BEFORE_SYNTHESIS' in str(e), str(e)
 else: raise AssertionError('did not reach synthesis')
