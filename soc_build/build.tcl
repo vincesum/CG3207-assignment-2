@@ -1,7 +1,8 @@
 # Generates the rv_soc bitstream: RV32IM core, caches, DDR2, OLED, UART and audio.
 # In Vivado, with no project open: Tools > Run Tcl Script, then select this file.
 # Or from a terminal: vivado -mode batch -nojournal -log build.log -source build.tcl
-# Creates soc_build/proj/rv_soc.xpr and the bitstream soc_build/soc_top.bit.
+# Creates soc_build/proj/rv_soc.xpr, with every testbench, and the bitstream soc_build/soc_top.bit.
+# Run it again after pulling to pick up new files. It replaces that project.
 # The lab project in project/ is not touched.
 # DDR uses the original generated synthesis RTL and XDC; MIG is not invoked.
 set root  [file normalize [file dirname [info script]]]
@@ -46,9 +47,14 @@ puts "DDR_MODE: original generated RTL and XDC (no MIG generation, no OOC DCP)"
 add_files -fileset constrs_1 -norecurse $soc/soc_top.xdc
 
 set_property top soc_top [current_fileset]
-# Simulation: test_soc is the default. The others can be chosen with Set as Top.
-set sim $top/project/project.srcs/sim_1/new
-add_files -fileset sim_1 -norecurse [list $sim/test_soc.v $sim/test_cache.v $sim/test_mmio.v $sim/test_soc_audio.v $sim/ddr_model.v $sim/test_soc_rom.mem]
+# Simulation: test_soc is the default. Choose another testbench with Set as Top.
+set srcs $top/project/project.srcs
+set sim  $srcs/sim_1/new
+add_files -fileset sim_1 -norecurse [concat [glob $sim/*.v] [glob $sim/*.mem] \
+    [list $srcs/sim_1/imports/Asst_03/test_MCycle.v $srcs/sim_1/imports/Asst_03/test_Wrapper_muldiv.v \
+          $srcs/sim_2/imports/new/test_RV_lw_sw.v $srcs/sim_3/new/test_RV_dp.v \
+          $core/Asst_02/test_Wrapper_DIP_to_LED_self_checking.v $core/Asst_02/Wrapper.v \
+          $core/Asst_02/AA_IROM.mem $core/Asst_02/AA_DMEM.mem]]
 set_property top test_soc [get_filesets sim_1]
 # ROM_FILE keeps its default "boot.mem": synthesis finds it because boot.mem is a project
 # memory file (a generic with a quoted path ends up with the quotes in the file name).
