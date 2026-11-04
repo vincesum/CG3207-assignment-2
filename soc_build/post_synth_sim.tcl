@@ -22,14 +22,13 @@ add_files -norecurse [glob $soc/io/*.v]
 add_files -norecurse $soc/rv_soc.v
 
 # rv_soc reads a ROM file called boot.mem, so use a copy of the test program under that name
-remove_files [get_files boot.mem]
 file mkdir $work/rom
 file copy -force $sim/test_soc_rom.mem $work/rom/boot.mem
 add_files -norecurse $work/rom/boot.mem
 set_property file_type {Memory Initialization Files} [get_files boot.mem]
 
 set_property top rv_soc [current_fileset]
-set_property STEPS.SYNTH_DESIGN.ARGS.MORE_OPTIONS {-mode out_of_context} [get_runs synth_1]
+set_property -name {STEPS.SYNTH_DESIGN.ARGS.MORE OPTIONS} -value {-mode out_of_context} -objects [get_runs synth_1]
 
 add_files -fileset sim_1 -norecurse [list $sim/test_soc.v $sim/ddr_model.v]
 set_property top test_soc [get_filesets sim_1]
