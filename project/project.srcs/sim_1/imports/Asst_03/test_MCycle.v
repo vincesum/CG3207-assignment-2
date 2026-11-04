@@ -32,147 +32,92 @@
 ----------------------------------------------------------------------------------
 */
 
-module test_MCycle(
+module test_MCycle();
+    // Checks every pair of 4-bit operands for every operation against values computed here.
+    parameter WIDTH = 4;
+    reg CLK = 0, RESET = 1, Start = 0;
+    reg [2:0] MCycleOp = 0;
+    reg [WIDTH-1:0] Operand1 = 0, Operand2 = 0;
+    wire [WIDTH-1:0] Result1, Result2;
+    wire Busy;
 
-    );
-    
-    // DECLARE INPUT SIGNALs
-    reg CLK = 0 ;
-    reg RESET = 0 ;
-    reg Start = 0 ;
-    reg [1:0] MCycleOp = 0 ;
-    reg [3:0] Operand1 = 0 ;
-    reg [3:0] Operand2 = 0 ;
+    MCycle #(.width(WIDTH)) dut(CLK, RESET, Start, MCycleOp, Operand1, Operand2, Result1, Result2, Busy);
 
-    // DECLARE OUTPUT SIGNALs
-    wire [3:0] Result1 ;
-    wire [3:0] Result2 ;
-    wire Busy ;
-    
-    // INSTANTIATE DEVICE/UNIT UNDER TEST (DUT/UUT)
-    MCycle dut( 
-        CLK, 
-        RESET, 
-        Start, 
-        MCycleOp, 
-        Operand1, 
-        Operand2, 
-        Result1, 
-        Result2, 
-        Busy
-        ) ;
-    
-    // STIMULI
+    always #5 CLK = ~CLK;
+
+    integer op, a, b, sa, sb, prod, q, r, checks = 0, fails = 0, waited;
+    reg [2*WIDTH-1:0] exp_prod;
+    reg [WIDTH-1:0] exp1, exp2;
+
+    task check(input [8*8-1:0] name);
+        begin
+            checks = checks + 1;
+            if (Result1 !== exp1 || Result2 !== exp2) begin
+                fails = fails + 1;
+                if (fails <= 10)
+                    $display("  FAIL %0s %0d, %0d: got %b %b, expected %b %b", name, a, b, Result2, Result1, exp2, exp1);
+            end
+        end
+    endtask
+
+    task run_one;
+        begin
+            @(negedge CLK);
+            Start = 1'b1;
+            @(negedge CLK);
+            waited = 0;
+            while (Busy && waited < 100) begin
+                @(negedge CLK);
+                waited = waited + 1;
+            end
+            if (Busy) begin
+                fails = fails + 1;
+                $display("  FAIL: Busy stuck high, op %b, %0d, %0d", MCycleOp, a, b);
+            end
+        end
+    endtask
+
     initial begin
-        // hold reset state for 100 ns.
-        #10 ;    
-        MCycleOp = 2'b00 ;
-        Operand1 = 4'b1111 ;
-        Operand2 = 4'b1111 ;
-        Start = 1'b1 ; // Start is asserted continously(Operations are performed back to back). To try a non-continous Start, you can uncomment the commented lines.    
-
-        wait(Busy) ; // suspend initial block till condition becomes true  ;
-        wait(~Busy) ;
-//        #10 ;
-//        Start = 1'b0 ;
-//        #10 ;
-        Operand1 = 4'b1110 ;
-        Operand2 = 4'b1111 ;
-//        Start = 1'b1 ;
-        
-        wait(Busy) ; 
-        wait(~Busy) ;
-//        #10 ;
-//        Start = 1'b0 ;
-//        #10 ;
-        MCycleOp = 2'b01 ;
-        Operand1 = 4'b1111 ;
-        Operand2 = 4'b1111 ;
-//        Start = 1'b1 ;
-
-        wait(Busy) ; 
-        wait(~Busy) ; 
-//        #10 ;
-//        Start = 1'b0 ;
-//        #10 ;
-        Operand1 = 4'b1110 ;
-        Operand2 = 4'b1111 ;
-//        Start = 1'b1 ;
-
-        wait(Busy) ; 
-        wait(~Busy) ; 
-        
-        // DIVISION TEST
-        MCycleOp = 2'b10 ; //signed division
-        Operand1 = 4'b1111 ; // negative / negative case
-        Operand2 = 4'b1111 ; // -1 / -1 = 1 R 0
-//        Start = 1'b1 ;
-
-        wait(Busy) ; 
-        wait(~Busy) ; 
-        
-        Operand1 = 4'b0111 ; // positive / negative case
-        Operand2 = 4'b1101 ; // 7 / -3 = -2 R 1
-//        Start = 1'b1 ;
-
-        wait(Busy) ; 
-        wait(~Busy) ; 
-        
-        Operand1 = 4'b1001 ; // negative / positive case
-        Operand2 = 4'b0011 ; // -7 / 3 = -2 R -1
-//        Start = 1'b1 ;
-
-        wait(Busy) ; 
-        wait(~Busy) ; 
-        
-        Operand1 = 4'b0111 ; // positive / positive case
-        Operand2 = 4'b0011 ; // 7 / 3 = 2 R 1
-//        Start = 1'b1 ;
-
-        wait(Busy) ; 
-        wait(~Busy) ; 
-        
-        MCycleOp = 2'b11 ; //unsigned division
-        Operand1 = 4'b1111 ; // remainder case
-        Operand2 = 4'b0100 ; // 15 / 4 = 3 R 3
-//        Start = 1'b1 ;
-
-        wait(Busy) ; 
-        wait(~Busy) ; 
-        
-        Operand1 = 4'b1100 ; // no remainder case
-        Operand2 = 4'b0100 ; // 12 / 4 = 3 R 0
-//        Start = 1'b1 ;
-
-        wait(Busy) ; 
-        wait(~Busy) ; 
-
-        Start = 1'b0 ;
-        
-
-
+        repeat (2) @(negedge CLK);
+        RESET = 0;
+        for (op = 0; op < 5; op = op + 1)
+            for (a = 0; a < 16; a = a + 1)
+                for (b = 0; b < 16; b = b + 1) begin
+                    Operand1 = a; Operand2 = b;
+                    sa = (a > 7) ? a - 16 : a;
+                    sb = (b > 7) ? b - 16 : b;
+                    case (op)
+                        0: begin MCycleOp = 3'b000; prod = sa * sb; end     // signed x signed
+                        1: begin MCycleOp = 3'b001; prod = a * b;   end     // unsigned x unsigned
+                        2: begin MCycleOp = 3'b100; prod = sa * b;  end     // signed x unsigned (mulhsu)
+                        3: begin                                            // signed division
+                            MCycleOp = 3'b010;
+                            if (b == 0)                 begin q = -1; r = sa; end
+                            else if (sa == -8 && sb == -1) begin q = -8; r = 0; end
+                            else                        begin q = sa / sb; r = sa % sb; end
+                        end
+                        4: begin                                            // unsigned division
+                            MCycleOp = 3'b011;
+                            if (b == 0) begin q = 15; r = a; end
+                            else        begin q = a / b; r = a % b; end
+                        end
+                    endcase
+                    if (op < 3) begin
+                        exp_prod = prod;
+                        exp1 = exp_prod[WIDTH-1:0];
+                        exp2 = exp_prod[2*WIDTH-1:WIDTH];
+                    end
+                    else begin
+                        exp1 = q;
+                        exp2 = r;
+                    end
+                    run_one;
+                    check("MCycle");
+                    Start = 1'b0;
+                end
+        $display("test_MCycle: %0d passed, %0d failed", checks - fails, fails);
+        if (fails == 0) $display("==== test_MCycle: PASS ====");
+        else            $display("==== test_MCycle: FAIL (%0d) ====", fails);
+        $finish;
     end
-     
-    // GENERATE CLOCK       
-    always begin 
-        #5 CLK = ~CLK ; 
-        // invert CLK every 5 time units 
-    end
-    
 endmodule
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

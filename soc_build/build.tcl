@@ -46,6 +46,10 @@ puts "DDR_MODE: original generated RTL and XDC (no MIG generation, no OOC DCP)"
 add_files -fileset constrs_1 -norecurse $soc/soc_top.xdc
 
 set_property top soc_top [current_fileset]
+# Simulation: test_soc is the default. The others can be chosen with Set as Top.
+set sim $top/project/project.srcs/sim_1/new
+add_files -fileset sim_1 -norecurse [list $sim/test_soc.v $sim/test_cache.v $sim/test_mmio.v $sim/test_soc_audio.v $sim/ddr_model.v $sim/test_soc_rom.mem]
+set_property top test_soc [get_filesets sim_1]
 # ROM_FILE keeps its default "boot.mem": synthesis finds it because boot.mem is a project
 # memory file (a generic with a quoted path ends up with the quotes in the file name).
 update_compile_order -fileset sources_1
