@@ -4,8 +4,9 @@
 # DDR uses the original generated synthesis RTL and XDC; MIG is not invoked.
 set root  [file normalize [file dirname [info script]]]
 set top   [file normalize $root/..]
-set jobs  [expr {[llength $argv] > 0 ? [lindex $argv 0] : 8}]
+set jobs  [expr {[info exists argv] && [llength $argv] > 0 ? [lindex $argv 0] : 8}]
 set rom   $top/sw/build/boot/boot.hex
+if {![file exists $rom]} { set rom $top/prebuilt/boot.hex }
 if {![file exists $rom]} { error "missing $rom - run: python sw/build.py boot" }
 
 # Use the original generated MIG synthesis RTL, with no managed XCI or OOC DCP.

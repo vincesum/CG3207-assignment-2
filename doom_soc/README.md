@@ -21,7 +21,7 @@ These steps start from a fresh clone. The commands are for Windows Command Promp
 | Tool | Notes |
 |---|---|
 | Vivado | **2023.2** builds this design from a clean clone, and **2018.2** built the earlier audio version. The Windows commands below assume `C:\Xilinx\Vivado\2018.2`, so change the path if yours differs. |
-| RISC-V GCC with newlib | Use the [xPack RISC-V toolchain](https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases); version 15.2.0 built the working DOOM binary. Unpack it and add its `bin` folder to `PATH`, then check with `riscv-none-elf-gcc --version`. |
+| RISC-V GCC with newlib | Only needed to rebuild the software. Use the [xPack RISC-V toolchain](https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases); version 15.2.0 built the working DOOM binary. Unpack it and add its `bin` folder to `PATH`, then check with `riscv-none-elf-gcc --version`. |
 | Python 3 with pyserial | `python -m pip install --user pyserial` |
 
 ### 2. Get the code
@@ -36,6 +36,8 @@ cd doom_soc
 Run the remaining commands from `doom_soc` unless a step says otherwise.
 
 ### 3. Build the software
+
+This step is optional unless you've changed the software: `prebuilt/` holds a ready-made `boot.hex` and `doom.bin`, and the build and loader use them when `sw\build` doesn't exist.
 
 ```
 python sw\build.py all --clean

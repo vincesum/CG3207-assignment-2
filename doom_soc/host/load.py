@@ -18,6 +18,8 @@ import argparse, os, struct, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 DEF_PROG = os.path.join(ROOT, 'sw', 'build', 'doom', 'doom.bin')
+if not os.path.exists(DEF_PROG):
+    DEF_PROG = os.path.join(ROOT, 'prebuilt', 'doom.bin')
 DEF_WAD = os.path.join(ROOT, 'third_party', 'doom1.wad')
 PROG_ADDR = 0x80000000
 WAD_HDR = 0x86FFFFF0
